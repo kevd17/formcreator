@@ -380,9 +380,7 @@ class PluginFormcreatorCondition extends CommonDBTM implements PluginFormcreator
       // Buttons to add a new comparison or remove the curent one
       $onclick = 'plugin_formcreator_addEmptyCondition(this, \'' . $itemtype . '\', ' . $itemId . ')';
       $html.= '<div class="div_show_condition_add">';
-      $html.= '<i class="fas fa-plus-circle" style="cursor: pointer;" onclick="' . $onclick . '"></i>&nbsp;</div>';
-
-      $onclick = 'plugin_formcreator_removeNextCondition(this, \'' . $itemtype . '\', ' . $itemId . ')';
+      $html.= '<i class="fas fa-plus-circle" style="cursor: pointer;" onclick="plugin_formcreator_addEmptyCondition(this, \'' . $itemtype . '\')"></i>&nbsp;</div>';
       $html.= '<div class="div_show_condition_remove">';
       $html.= '<i class="fas fa-minus-circle"  style="cursor: pointer;" onclick="' . $onclick . '"></i>&nbsp;</div>';
 

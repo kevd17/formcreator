@@ -502,10 +502,13 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
       echo '</h1>';
 
       // Form Header
-      if (!empty($this->fields['content'])) {
-         echo '<div class="form_header">';
-         echo html_entity_decode($this->fields['content']);
-         echo '</div>';
+      echo '<div class="form_header">';
+      echo "<h1>";
+      echo $form->fields['name']."&nbsp;";
+      echo '<i class="pointer print_button fas fa-print" title="' . __("Print this form", 'formcreator') . '" onclick="window.print();"></i>';
+      echo "</h1>";
+      if (!empty($form->fields['content'])) {
+         echo html_entity_decode($form->fields['content']);
       }
 
       echo '<ol>';
@@ -582,6 +585,89 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
          }
          echo '</div>';
          echo '</div>';
+      }
+
+      echo '<div class="form_section">';
+
+      // TODO: code very close to PluginFormcreatorTargetBase::getFullForm() (factorizable ?)
+      // compute all questions
+      $questionTable = PluginFormcreatorQuestion::getTable();
+      $sectionTable = PluginFormcreatorSection::getTable();
+      $answerTable = PluginFormcreatorAnswer::getTable();
+      $formFk = PluginFormcreatorForm::getForeignKeyField();
+      $questionFk = PluginFormcreatorQuestion::getForeignKeyField();
+      $sectionFk = PluginFormcreatorSection::getForeignKeyField();
+      $formAnswerFk = PluginFormcreatorFormAnswer::getForeignKeyField();
+      $request = [
+         'SELECT' => [
+            $sectionTable => ['name as section_name'],
+            $questionTable => ['*'],
+            $answerTable => ['answer'],
+         ],
+         'FROM' => [
+            $questionTable,
+         ],
+         'LEFT JOIN' => [
+            $answerTable => [
+               'FKEY' => [
+                  $answerTable => $questionFk,
+                  $questionTable => 'id',
+               ],
+            ],
+         ],
+         'INNER JOIN' => [
+            $sectionTable => [
+               'FKEY' => [
+                  $questionTable => $sectionFk,
+                  $sectionTable => 'id',
+               ],
+            ],
+         ],
+         'WHERE' => [
+            'AND' => [
+               "$answerTable.$formAnswerFk" => $ID,
+               "$sectionTable.$formFk" => $form->getID(),
+            ],
+         ],
+         'GROUPBY' => [
+            "$questionTable.id",
+         ],
+         'ORDER' => [
+            "$sectionTable.order ASC",
+            "$sectionTable.id ASC",
+            "$questionTable.order *ASC",
+         ],
+      ];
+      $questions = $DB->request($request);
+      $last_section = '';
+      $questionsCount = $questions->count();
+      $fields = $form->getFields();
+      foreach ($questions as $question_line) {
+         $question = new PluginFormcreatorQuestion();
+         $question->getFromDB($question_line['id']);
+         $fields[$question_line['id']]->deserializeValue($question_line['answer']);
+      }
+      foreach ($questions as $question_line) {
+         // Get and display current section if needed
+         if ($last_section != $question_line['section_name']) {
+            echo '<h2>'.$question_line['section_name'].'</h2>';
+            $last_section = $question_line['section_name'];
+         }
+
+         if ($canEdit) {
+            $fields[$question_line['id']]->show($canEdit);
+         } else {
+            if (($question_line['fieldtype'] != "description" && $question_line['fieldtype'] != "hidden")) {
+               if (PluginFormcreatorFields::isVisible($fields[$question_line['id']]->getQuestion(), $fields)) {
+                  $fields[$question_line['id']]->show($canEdit);
+               }
+            }
+         }
+      }
+      if ($canEdit) {
+         echo Html::scriptBlock('$(function() {
+            formcreatorShowFields($("form[name=\'form\']"));
+         })');
       }
 
       //add requester info

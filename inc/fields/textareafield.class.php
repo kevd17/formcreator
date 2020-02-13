@@ -75,19 +75,31 @@ class PluginFormcreatorTextareaField extends PluginFormcreatorTextField
       $id           = $this->question->getID();
       $rand         = mt_rand();
       $fieldName    = 'formcreator_field_' . $id;
-      $value        = nl2br($this->value);
-      $html = '';
-      $html .= Html::textarea([
-         'name'              => $fieldName,
-         'rand'              => $rand,
-         'value'             => $value,
-         'rows'              => 5,
-         'display'           => false,
-         'enable_richtext'   => true,
-         'enable_fileupload' => true,
-      ]);
-      if (version_compare(GLPI_VERSION, '9.4.6') < 0) {
-         $html .= '</div>';
+      $useRichText = true;
+      if ($canEdit) {
+         if ($useRichText) {
+            $value = nl2br($this->value);
+         } else {
+            $value = $this->value;
+         }
+         echo Html::textarea([
+            'name'            => $fieldName,
+            'rand'            => $rand,
+            'value'           => $value,
+            'rows'            => 5,
+            'display'         => false,
+            'enable_richtext' => $useRichText,
+            'enable_fileupload'=> true,
+         ]);
+         echo Html::scriptBlock("$(function() {
+            pluginFormcreatorInitializeTextarea('$fieldName', '$rand');
+         });");
+      } else {
+         if ($useRichText) {
+            echo Toolbox::getHtmlToDisplay($this->value);
+         } else {
+            echo nl2br($this->value);
+         }
       }
       $html .= Html::scriptBlock("$(function() {
          pluginFormcreatorInitializeTextarea('$fieldName', '$rand');
@@ -143,19 +155,15 @@ class PluginFormcreatorTextareaField extends PluginFormcreatorTextField
    }
 
    public function parseAnswerValues($input, $nonDestructive = false) {
-      $key = 'formcreator_field_' . $this->question->getID();
       $input = $this->question->addFiles(
          $input,
          [
             'force_update'  => true,
-            'content_field' => $key,
+            'content_field' => 'formcreator_field_' . $this->question->getID(),
          ]
       );
 
-      $this->value = str_replace('\r\n', "\r\n", $input[$key]);
-      $this->value = Toolbox::stripslashes_deep($this->value);
-
-      return true;
+      return parent::parseAnswerValues($input, $nonDestructive);
    }
 
    public function getValueForTargetText($richText) {

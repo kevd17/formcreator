@@ -964,6 +964,52 @@ function plugin_formcreator_deleteTarget(itemtype, target_id, token) {
    }
 }
 
+// SHOW OR HIDE FORM FIELDS
+var formcreatorQuestions = new Object();
+
+function formcreatorShowFields(form) {
+   $.ajax({
+      url: rootDoc + '/plugins/formcreator/ajax/showfields.php',
+      type: "POST",
+      data: form.serializeArray()
+   }).done(function(response){
+      try {
+         var itemToShow = JSON.parse(response);
+         var questionToShow = itemToShow['PluginFormcreatorQuestion'];
+         var sectionToShow = itemToShow['PluginFormcreatorSection'];
+      } catch (e) {
+         // Do nothing for now
+      }
+      for (var sectionKey in sectionToShow) {
+         var sectionId = parseInt(sectionKey);
+         if (!isNaN(sectionId)) {
+            if (sectionToShow[sectionId]) {
+               $('div[data-section-id="' + sectionId+ '"]').show();
+            } else {
+               $('div[data-section-id="' + sectionId+ '"]').hide();
+            }
+         }         
+      }
+      var i = 0;
+      for (var questionKey in questionToShow) {
+         var questionId = questionKey;
+         questionId = parseInt(questionKey.replace('formcreator_field_', ''));
+         if (!isNaN(questionId)) {
+            if (questionToShow[questionKey]) {
+               $('#form-group-field-' + questionKey).show();
+               i++;
+               $('#form-group-field-' + questionKey).removeClass('line' + (i+1) % 2);
+               $('#form-group-field-' + questionKey).addClass('line' + i%2);
+            } else {
+               $('#form-group-field-' + questionKey).hide();
+               $('#form-group-field-' + questionKey).removeClass('line0');
+               $('#form-group-field-' + questionKey).removeClass('line1');
+            }
+         }
+      }
+   });
+}
+
 // DESTINATION
 function plugin_formcreator_formcreatorChangeDueDate(value) {
    $('#due_date_questions').hide();
