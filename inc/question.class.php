@@ -226,8 +226,6 @@ PluginFormcreatorConditionnableInterface
       if (!$field->isPrerequisites()) {
          return '';
       }
-      var_dump($field->show($canEdit));
-      exit;
 
       $key = 'formcreator_field_' . $this->getID();
       if (isset($value[$key])) {
