@@ -1138,6 +1138,14 @@ PluginFormcreatorConditionnableInterface
     * @return Null                     Nothing, just display the form
     */
    public function displayUserForm() {
+      global $CFG_GLPI;
+      
+      if (isset($_SESSION['formcreator']['data'])) {
+         $data = $_SESSION['formcreator']['data'];
+         unset($_SESSION['formcreator']['data']);
+      } else {
+         $data = null;
+      }
       // Print css media
       echo Html::css("plugins/formcreator/css/print_form.css", ['media' => 'print']);
 
@@ -1220,7 +1228,7 @@ PluginFormcreatorConditionnableInterface
                   }
                }
             }
-            echo $question->getRenderedHtml(true, $_SESSION['formcreator']['data']);
+            $question->getRenderedHtml(true, $_SESSION['formcreator']['data']);
             $lastQuestion = $question;
          }
          echo '</div>';
@@ -1280,6 +1288,10 @@ PluginFormcreatorConditionnableInterface
       echo Html::hidden('plugin_formcreator_forms_id', ['value' => $this->getID()]);
       echo Html::hidden('_glpi_csrf_token', ['value' => Session::getNewCSRFToken()]);
       echo Html::hidden('uuid', ['value' => $this->fields['uuid']]);
+
+      if (isset($_REQUEST['fullform']) && $_REQUEST['fullform'] == "true") {
+         echo Html::hidden('fullform', ['value' => "true"]);
+      }
       Html::closeForm();
    }
 

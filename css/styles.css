@@ -232,7 +232,7 @@ input.submit_button:focus {
 
 /* form#plugin_formcreator_form {
    max-width: 950px;
-   margin: 10px auto 50px !important;
+   margin: 10px auto 50px;
    display: block;
    position: relative;
    line-height: 1.4em;
