@@ -1205,7 +1205,7 @@ PluginFormcreatorConditionnableInterface
          . '">';
 
          // section name
-         echo '<h2>';
+         echo '<h2>AAA';
          echo empty($section->fields['name']) ? '(' . $sectionId . ')' : $section->fields['name'];
          echo '</h2>';
 
