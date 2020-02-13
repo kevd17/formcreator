@@ -1228,7 +1228,7 @@ PluginFormcreatorConditionnableInterface
                   }
                }
             }
-            $question->getRenderedHtml(true, $_SESSION['formcreator']['data']);
+            echo $question->getRenderedHtml(true, $_SESSION['formcreator']['data']);
             $lastQuestion = $question;
          }
          echo '</div>';
