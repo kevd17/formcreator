@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -32,7 +32,9 @@
 class PluginFormcreatorDropdownField extends PluginFormcreatorField
 {
    public function isPrerequisites() {
-      return true;
+      $itemtype = $this->getSubItemtype();
+
+      return class_exists($itemtype);
    }
 
    public function getDesignSpecializationField() {
@@ -117,7 +119,7 @@ class PluginFormcreatorDropdownField extends PluginFormcreatorField
       $additions .= '</tr>';
       $additions .= Html::scriptBlock("plugin_formcreator_changeDropdownItemtype($rand);");
 
-      $common = $common = parent::getDesignSpecializationField();
+      $common = parent::getDesignSpecializationField();
       $additions .= $common['additions'];
 
       return [
@@ -129,163 +131,11 @@ class PluginFormcreatorDropdownField extends PluginFormcreatorField
       ];
    }
 
-   public function displayField($canEdit = true) {
+   public function getRenderedHtml($canEdit = true) {
       global $DB, $CFG_GLPI;
 
-      if ($canEdit) {
-         $id           = $this->question->getID();
-         $rand         = mt_rand();
-         $fieldName    = 'formcreator_field_' . $id;
-         $domId        = $fieldName . '_' . $rand;
-         if (!empty($this->question->fields['values'])) {
-            $decodedValues = json_decode($this->question->fields['values'], JSON_OBJECT_AS_ARRAY);
-            if ($decodedValues === null) {
-               $itemtype = $this->question->fields['values'];
-            } else {
-               $itemtype = $decodedValues['itemtype'];
-            }
-
-            $dparams = ['name'     => $fieldName,
-                        'value'    => $this->value,
-                        'comments' => false,
-                        'entity'   => $_SESSION['glpiactiveentities'],
-                        'displaywith' => ['id'],
-                        'rand'     => $rand];
-
-            $dparams_cond_crit = [];
-            switch ($itemtype) {
-               case Entity::class:
-                  unset($dparams['entity']);
-
-               case User::class:
-                  $dparams['right'] = 'all';
-                  break;
-
-               case ITILCategory::class:
-                  if (isset ($_SESSION['glpiactiveprofile']['interface'])
-                     && $_SESSION['glpiactiveprofile']['interface'] == 'helpdesk') {
-                     $dparams_cond_crit['is_helpdeskvisible'] = 1;
-                  }
-                  switch ($decodedValues['show_ticket_categories']) {
-                     case 'request':
-                        $dparams_cond_crit['is_request'] = 1;
-                        break;
-                     case 'incident':
-                        $dparams_cond_crit['is_incident'] = 1;
-                        break;
-                     case 'both':
-                        $dparams_cond_crit['OR'] = [
-                           'is_incident' => 1,
-                           'is_request'  => 1,
-                        ];
-                        break;
-                     case 'change':
-                        $dparams_cond_crit['is_change'] = 1;
-                        break;
-                     case 'all':
-                        $dparams_cond_crit['OR'] = [
-                           'is_change'   => 1,
-                           'is_incident' => 1,
-                           'is_request'  => 1,
-                        ];
-                        break;
-                  }
-                  break;
-
-               default:
-                  $assignableToTicket = in_array($itemtype, $CFG_GLPI['ticket_types']);
-                  if (Session::getLoginUserID()) {
-                     // Restrict assignable types to current profile's settings
-                     $assignableToTicket = CommonITILObject::isPossibleToAssignType($itemtype);
-                  }
-                  if ($assignableToTicket) {
-                     $userFk = User::getForeignKeyField();
-                     $groupFk = Group::getForeignKeyField();
-                     $canViewAllHardware = Session::haveRight('helpdesk_hardware', pow(2, Ticket::HELPDESK_ALL_HARDWARE));
-                     $canViewMyHardware = Session::haveRight('helpdesk_hardware', pow(2, Ticket::HELPDESK_MY_HARDWARE));
-                     $canViewGroupHardware = Session::haveRight('show_group_hardware', '1');
-                     $groups = [];
-                     if ($canViewGroupHardware) {
-                        $groups = $this->getMyGroups(Session::getLoginUserID());
-                     }
-                     if ($DB->fieldExists($itemtype::getTable(), $userFk)
-                        && !$canViewAllHardware && $canViewMyHardware) {
-                        $userId = $_SESSION['glpiID'];
-                        $dparams_cond_crit[$userFk] = $userId;
-                     }
-                     if ($DB->fieldExists($itemtype::getTable(), $groupFk)
-                        && !$canViewAllHardware && count($groups) > 0) {
-                        $dparams_cond_crit = [
-                           'OR' => [
-                              $groupFk => $groups,
-                           ] + $dparams_cond_crit
-                        ];
-                        $groups = implode("', '", $groups);
-                     }
-                  }
-            }
-
-            // Set specific root if defined (CommonTreeDropdown)
-            $baseLevel = 0;
-            if (isset($decodedValues['show_ticket_categories_root'])
-               && (int) $decodedValues['show_ticket_categories_root'] > 0) {
-                  $sons = (new DBUtils)->getSonsOf(
-                     $itemtype::getTable(),
-                     $decodedValues['show_ticket_categories_root']
-                  );
-               $dparams_cond_crit['id'] = $sons;
-               $rootItem = new $itemtype();
-               if ($rootItem->getFromDB($decodedValues['show_ticket_categories_root'])) {
-                  $baseLevel = $rootItem->fields['level'];
-               }
-            }
-
-            // Apply max depth if defined (CommonTreeDropdown)
-            if (isset($decodedValues['show_ticket_categories_depth'])
-               && $decodedValues['show_ticket_categories_depth'] > 0) {
-               $dparams_cond_crit['level'] = ['<=', $decodedValues['show_ticket_categories_depth'] + $baseLevel];
-            }
-
-            $dparams['condition'] = $dparams_cond_crit;
-
-            $emptyItem = new $itemtype();
-            $emptyItem->getEmpty();
-            $dparams['displaywith'] = [];
-            if (isset($emptyItem->fields['serial'])) {
-               $dparams['displaywith'][] = 'serial';
-            }
-            if (isset($emptyItem->fields['otherserial'])) {
-               $dparams['displaywith'][] = 'otherserial';
-            }
-            if (count($dparams['displaywith']) > 0) {
-               $dparams['itemtype'] = $itemtype;
-               $dparams['table'] = $itemtype::getTable();
-               $dparams['multiple'] = false;
-               $dparams['valuename'] = Dropdown::EMPTY_VALUE;
-               if ($dparams['value'] != 0) {
-                  $dparams['valuename'] = $dparams['value'];
-               }
-               echo Html::jsAjaxDropdown(
-                  $fieldName,
-                  $domId,
-                  $CFG_GLPI['root_doc']."/ajax/getDropdownFindNum.php",
-                  $dparams
-               );
-            } else {
-               $itemtype::dropdown($dparams);
-            }
-         }
-         echo PHP_EOL;
-         echo Html::scriptBlock("$(function() {
-            pluginFormcreatorInitializeDropdown('$fieldName', '$rand');
-         });");
-      } else {
-         $decodedValues = json_decode($this->question->fields['values'], JSON_OBJECT_AS_ARRAY);
-         if ($decodedValues === null) {
-            $itemtype = $this->question->fields['values'];
-         } else {
-            $itemtype = $decodedValues['itemtype'];
-         }
+      $itemtype = $this->getSubItemtype();
+      if (!$canEdit) {
          $item = new $itemtype();
          $value = '';
          if ($item->getFromDB($this->value)) {
@@ -296,8 +146,158 @@ class PluginFormcreatorDropdownField extends PluginFormcreatorField
             $value = $item->fields[$column];
          }
 
-         echo $value;
+         return $value;
       }
+
+      $html        = '';
+      $id           = $this->question->getID();
+      $rand         = mt_rand();
+      $fieldName    = 'formcreator_field_' . $id;
+      $domId        = $fieldName . '_' . $rand;
+      if (!empty($this->question->fields['values'])) {
+         $dparams = ['name'     => $fieldName,
+                     'value'    => $this->value,
+                     'display'  => false,
+                     'comments' => false,
+                     'entity'   => $_SESSION['glpiactiveentities'],
+                     'displaywith' => ['id'],
+                     'rand'     => $rand];
+
+         $dparams_cond_crit = [];
+         $decodedValues = json_decode($this->question->fields['values'], JSON_OBJECT_AS_ARRAY);
+         switch ($itemtype) {
+            case Entity::class:
+               unset($dparams['entity']);
+
+            case User::class:
+               $dparams['right'] = 'all';
+               break;
+
+            case ITILCategory::class:
+               if (Session::getCurrentInterface() == 'helpdesk') {
+                  $dparams_cond_crit['is_helpdeskvisible'] = 1;
+               }
+               switch ($decodedValues['show_ticket_categories']) {
+                  case 'request':
+                     $dparams_cond_crit['is_request'] = 1;
+                     break;
+                  case 'incident':
+                     $dparams_cond_crit['is_incident'] = 1;
+                     break;
+                  case 'both':
+                     $dparams_cond_crit['OR'] = [
+                        'is_incident' => 1,
+                        'is_request'  => 1,
+                     ];
+                     break;
+                  case 'change':
+                     $dparams_cond_crit['is_change'] = 1;
+                     break;
+                  case 'all':
+                     $dparams_cond_crit['OR'] = [
+                        'is_change'   => 1,
+                        'is_incident' => 1,
+                        'is_request'  => 1,
+                     ];
+                     break;
+               }
+               break;
+
+            default:
+               $assignableToTicket = in_array($itemtype, $CFG_GLPI['ticket_types']);
+               if (Session::getLoginUserID()) {
+                  // Restrict assignable types to current profile's settings
+                  $assignableToTicket = CommonITILObject::isPossibleToAssignType($itemtype);
+               }
+               if ($assignableToTicket) {
+                  $userFk = User::getForeignKeyField();
+                  $groupFk = Group::getForeignKeyField();
+                  $canViewAllHardware = Session::haveRight('helpdesk_hardware', pow(2, Ticket::HELPDESK_ALL_HARDWARE));
+                  $canViewMyHardware = Session::haveRight('helpdesk_hardware', pow(2, Ticket::HELPDESK_MY_HARDWARE));
+                  $canViewGroupHardware = Session::haveRight('show_group_hardware', '1');
+                  $groups = [];
+                  if ($canViewGroupHardware) {
+                     $groups = $this->getMyGroups(Session::getLoginUserID());
+                  }
+                  if ($DB->fieldExists($itemtype::getTable(), $userFk)
+                     && !$canViewAllHardware && $canViewMyHardware) {
+                     $userId = $_SESSION['glpiID'];
+                     $dparams_cond_crit[$userFk] = $userId;
+                  }
+                  if ($DB->fieldExists($itemtype::getTable(), $groupFk)
+                     && !$canViewAllHardware && count($groups) > 0) {
+                     $dparams_cond_crit = [
+                        'OR' => [
+                           $groupFk => $groups,
+                        ] + $dparams_cond_crit
+                     ];
+                     $groups = implode("', '", $groups);
+                  }
+                  // Check if helpdesk availability is fine tunable on a per item basis
+                  if ($DB->fieldExists($itemtype::getTable(), 'is_helpdesk_visible')) {
+                     $dparams_cond_crit[] = [
+                        'is_helpdesk_visible' => '1',
+                     ];
+                  }
+            }
+         }
+
+         // Set specific root if defined (CommonTreeDropdown)
+         $baseLevel = 0;
+         if (isset($decodedValues['show_ticket_categories_root'])
+            && (int) $decodedValues['show_ticket_categories_root'] > 0) {
+               $sons = (new DBUtils)->getSonsOf(
+                  $itemtype::getTable(),
+                  $decodedValues['show_ticket_categories_root']
+               );
+            $dparams_cond_crit['id'] = $sons;
+            $rootItem = new $itemtype();
+            if ($rootItem->getFromDB($decodedValues['show_ticket_categories_root'])) {
+               $baseLevel = $rootItem->fields['level'];
+            }
+         }
+
+         // Apply max depth if defined (CommonTreeDropdown)
+         if (isset($decodedValues['show_ticket_categories_depth'])
+            && $decodedValues['show_ticket_categories_depth'] > 0) {
+            $dparams_cond_crit['level'] = ['<=', $decodedValues['show_ticket_categories_depth'] + $baseLevel];
+         }
+
+         $dparams['condition'] = $dparams_cond_crit;
+
+         $emptyItem = new $itemtype();
+         $emptyItem->getEmpty();
+         $dparams['displaywith'] = [];
+         if (isset($emptyItem->fields['serial'])) {
+            $dparams['displaywith'][] = 'serial';
+         }
+         if (isset($emptyItem->fields['otherserial'])) {
+            $dparams['displaywith'][] = 'otherserial';
+         }
+         if (count($dparams['displaywith']) > 0) {
+            $dparams['itemtype'] = $itemtype;
+            $dparams['table'] = $itemtype::getTable();
+            $dparams['multiple'] = false;
+            $dparams['valuename'] = Dropdown::EMPTY_VALUE;
+            if ($dparams['value'] != 0) {
+               $dparams['valuename'] = $dparams['value'];
+            }
+            $html .= Html::jsAjaxDropdown(
+               $fieldName,
+               $domId,
+               $CFG_GLPI['root_doc']."/ajax/getDropdownFindNum.php",
+               $dparams
+            );
+         } else {
+            $html .= $itemtype::dropdown($dparams);
+         }
+      }
+      $html .= PHP_EOL;
+      $html .= Html::scriptBlock("$(function() {
+         pluginFormcreatorInitializeDropdown('$fieldName', '$rand');
+      });");
+
+      return $html;
    }
 
    public function serializeValue() {
@@ -324,11 +324,7 @@ class PluginFormcreatorDropdownField extends PluginFormcreatorField
 
    public function getValueForTargetText($richText) {
       $DbUtil = new DbUtils();
-      $decodedValues = json_decode($this->question->fields['values'], JSON_OBJECT_AS_ARRAY);
-      $itemtype = $this->question->fields['values'];
-      if (isset($decodedValues['itemtype'])) {
-         $itemtype = $decodedValues['itemtype'];
-      }
+      $itemtype = $this->getSubItemtype();
       if ($itemtype == User::class) {
          $value = (new DBUtils())->getUserName($this->value);
       } else {
@@ -366,56 +362,61 @@ class PluginFormcreatorDropdownField extends PluginFormcreatorField
       return true;
    }
 
+   public function isValidValue($value) {
+      return true;
+   }
+
    public function prepareQuestionInputForSave($input) {
-      if (isset($input['dropdown_values'])) {
-         if (empty($input['dropdown_values'])) {
-            Session::addMessageAfterRedirect(
-                  __('The field value is required:', 'formcreator') . ' ' . $input['name'],
-                  false,
-                  ERROR);
-            return [];
-         }
-         $allowedDropdownValues = [];
-         $stdtypes = Dropdown::getStandardDropdownItemTypes();
-         foreach ($stdtypes as $categoryOfTypes) {
-            $allowedDropdownValues = array_merge($allowedDropdownValues, array_keys($categoryOfTypes));
-         }
-         if (!in_array($input['dropdown_values'], $allowedDropdownValues)) {
-            Session::addMessageAfterRedirect(
-                  __('Invalid dropdown type:', 'formcreator') . ' ' . $input['name'],
-                  false,
-                  ERROR);
-            return [];
-         }
-         $input['values'] = [
-            'itemtype' => $input['dropdown_values'],
-         ];
-
-         // Params for CommonTreeDropdown fields
-         if (is_a($input['dropdown_values'], "CommonTreeDropdown", true)) {
-            // Specific param for ITILCategory
-            if ($input['dropdown_values'] == ITILCategory::class) {
-               $input['values']['show_ticket_categories'] = $input['show_ticket_categories'];
-            }
-
-            if ($input['show_ticket_categories_depth'] != (int) $input['show_ticket_categories_depth']) {
-               $input['values']['show_ticket_categories_depth'] = 0;
-            } else {
-               $input['values']['show_ticket_categories_depth'] = $input['show_ticket_categories_depth'];
-            }
-            $input['values']['show_ticket_categories_root'] = isset($input['show_ticket_categories_root'])
-                                                              ? $input['show_ticket_categories_root']
-                                                              : '';
-         }
-         $input['values'] = json_encode($input['values']);
-
-         if ($input['dropdown_values'] == ITILCategory::class) {
-            unset($input['show_ticket_categories']);
-         }
-         unset($input['show_ticket_categories_depth']);
-         unset($input['show_ticket_categories_root']);
-         $this->value = isset($input['dropdown_default_value']) ? $input['dropdown_default_value'] : '';
+      if (!isset($input['dropdown_values']) || empty($input['dropdown_values'])) {
+         Session::addMessageAfterRedirect(
+            __('The field value is required:', 'formcreator') . ' ' . $input['name'],
+            false,
+            ERROR);
+         return [];
       }
+      $allowedDropdownValues = [];
+      $stdtypes = Dropdown::getStandardDropdownItemTypes();
+      foreach ($stdtypes as $categoryOfTypes) {
+         $allowedDropdownValues = array_merge($allowedDropdownValues, array_keys($categoryOfTypes));
+      }
+      if (!in_array($input['dropdown_values'], $allowedDropdownValues)) {
+         Session::addMessageAfterRedirect(
+               __('Invalid dropdown type:', 'formcreator') . ' ' . $input['name'],
+               false,
+               ERROR);
+         return [];
+      }
+      $input['values'] = [
+         'itemtype' => $input['dropdown_values'],
+      ];
+
+      // Params for CommonTreeDropdown fields
+      if (is_a($input['dropdown_values'], CommonTreeDropdown::class, true)) {
+         // Specific param for ITILCategory
+         if ($input['dropdown_values'] == ITILCategory::class) {
+            $input['values']['show_ticket_categories'] = $input['show_ticket_categories'];
+         }
+
+         if ($input['show_ticket_categories_depth'] != (int) $input['show_ticket_categories_depth']) {
+            $input['values']['show_ticket_categories_depth'] = 0;
+         } else {
+            $input['values']['show_ticket_categories_depth'] = $input['show_ticket_categories_depth'];
+         }
+         $input['values']['show_ticket_categories_root'] = isset($input['show_ticket_categories_root'])
+                                                            ? $input['show_ticket_categories_root']
+                                                            : '';
+      }
+
+      $input['values'] = json_encode($input['values']);
+
+      if ($input['dropdown_values'] == ITILCategory::class) {
+         unset($input['show_ticket_categories']);
+      }
+      unset($input['show_ticket_categories_depth']);
+      unset($input['show_ticket_categories_root']);
+
+      $input['default_values'] = isset($input['dropdown_default_value']) ? $input['dropdown_default_value'] : '';
+      unset($input['dropdown_default_value']);
 
       return $input;
    }
@@ -646,5 +647,28 @@ class PluginFormcreatorDropdownField extends PluginFormcreatorField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-caret-down" aria-hidden="true"></i>';
+   }
+
+   public function isVisibleField()
+   {
+      return true;
+   }
+
+   public function isEditableField()
+   {
+      return true;
+   }
+
+   /**
+    * Get the itemtype of the item to show
+    *
+    * @return string
+    */
+   protected function getSubItemtype() {
+      $decodedValues = json_decode($this->question->fields['values'], JSON_OBJECT_AS_ARRAY);
+      if ($decodedValues === null) {
+         return $this->question->fields['values'];
+      }
+         return $decodedValues['itemtype'];
    }
 }

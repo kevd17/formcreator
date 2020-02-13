@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -75,44 +75,50 @@ abstract class PluginFormcreatorField implements PluginFormcreatorFieldInterface
     * @param boolean $canEdit is the field editable ?
     */
    public function show($canEdit = true) {
-      $required = ($canEdit && $this->question->fields['required']) ? ' required' : '';
+      $html = '';
 
-      echo '<div class="form-group ' . $required . '" id="form-group-field-' . $this->question->getID() . '">';
-      echo '<label for="formcreator_field_' . $this->question->getID() . '">';
-      echo $this->getLabel();
-      if ($canEdit && $this->question->fields['required']) {
-         echo ' <span class="red">*</span>';
+      if ($this->isVisibleField()) {
+         $html .= '<label for="formcreator_field_' . $this->question->getID() . '">';
+         $html .= $this->getLabel();
+         if ($canEdit && $this->question->fields['required']) {
+            $html .= ' <span class="red">*</span>';
+         }
+         $html .= '</label>';
       }
-      echo '</label>';
-      echo '<div class="help-block">' . html_entity_decode($this->question->fields['description']) . '</div>';
+      if ($this->isEditableField() && !empty($this->question->fields['description'])) {
+         $html .= '<div class="help-block">' . html_entity_decode($this->question->fields['description']) . '</div>';
+      }
+      $html .= '<div class="form_field">';
+      $html .= $this->getRenderedHtml($canEdit);
+      $html .= '</div>';
 
-      echo '<div class="form_field">';
-      $this->displayField($canEdit);
-      echo '</div>';
-      echo '</div>';
+      return $html;
    }
 
    /**
     * Outputs the HTML representing the field
     * @param string $canEdit
     */
-   public function displayField($canEdit = true) {
+   public function getRenderedHtml($canEdit = true) {
+      if (!$canEdit) {
+         return $this->value;
+      }
+
+      $html         = '';
       $id           = $this->question->getID();
       $rand         = mt_rand();
       $fieldName    = 'formcreator_field_' . $id;
       $domId        = $fieldName . '_' . $rand;
       $defaultValue = Html::cleanInputText($this->value);
-      if ($canEdit) {
-         echo '<input type="text" class="form-control"
-                  name="' . $fieldName . '"
-                  id="' . $domId . '"
-                  value="' . $defaultValue . '" />';
-         echo Html::scriptBlock("$(function() {
-            pluginFormcreatorInitializeField('$fieldName', '$rand');
-         });");
-      } else {
-         echo $this->value;
-      }
+      $html .= Html::input($fieldName, [
+         'id'    => $domId,
+         'value' => $defaultValue
+      ]);
+      $html .= Html::scriptBlock("$(function() {
+         pluginFormcreatorInitializeField('$fieldName', '$rand');
+      });");
+
+      return $html;
    }
 
    /**
@@ -129,7 +135,14 @@ abstract class PluginFormcreatorField implements PluginFormcreatorFieldInterface
     * @return array available values
     */
    public function getAvailableValues() {
-      return explode("\r\n", $this->question->fields['values']);
+      $values = json_decode($this->question->fields['values']);
+      $tab_values = [];
+      foreach ($values as $value) {
+         if ((trim($value) != '')) {
+            $tab_values[$value] = $value;
+         }
+      }
+      return $tab_values;
    }
 
    public function isRequired() {
@@ -142,9 +155,21 @@ abstract class PluginFormcreatorField implements PluginFormcreatorFieldInterface
     * @return string
     */
    protected function trimValue($value) {
+      global $DB;
+
       $value = explode('\r\n', $value);
-      $value = array_map('trim', $value);
-      return implode('\r\n', $value);
+      // input has escpaed single quotes
+      $value = Toolbox::stripslashes_deep($value);
+      $value = array_filter($value, function($value) {
+         return ($value !== '');
+      });
+      $value = array_map(
+         function ($value) {
+            return trim($value);
+         }, $value
+      );
+
+      return $DB->escape(json_encode($value, JSON_UNESCAPED_UNICODE));
    }
 
    public function getFieldTypeName() {
@@ -180,7 +205,7 @@ abstract class PluginFormcreatorField implements PluginFormcreatorFieldInterface
       }
 
       foreach ($this->getEmptyParameters() as $fieldName => $parameter) {
-         $input['_parameters'][$fieldTypeName][$fieldName]['plugin_formcreator_questions_id'] = $question->getID();
+         $input['_parameters'][$fieldTypeName][$fieldName]['plugin_formcreator_questions_id'] = $this->question->getID();
          $parameter->add($input['_parameters'][$fieldTypeName][$fieldName]);
       }
    }
@@ -191,15 +216,18 @@ abstract class PluginFormcreatorField implements PluginFormcreatorFieldInterface
          return;
       }
 
-      $parameters = $this->getParameters();
-      foreach ($parameters as $fieldName => $parameter) {
-         $input['_parameters'][$fieldTypeName][$fieldName]['plugin_formcreator_questions_id'] = $question->getID();
+      foreach ($this->getParameters() as $fieldName => $parameter) {
+         if (!isset($input['_parameters'][$fieldTypeName][$fieldName])) {
+            continue;
+         }
+         $parameterInput = $input['_parameters'][$fieldTypeName][$fieldName];
+         $parameterInput['plugin_formcreator_questions_id'] = $this->question->getID();
          if ($parameter->isNewItem()) {
             // In case of the parameter vanished in DB, just recreate it
-            $parameter->add($input['_parameters'][$fieldTypeName][$fieldName]);
+            $parameter->add($parameterInput);
          } else {
-            $input['_parameters'][$fieldTypeName][$fieldName]['id'] = $parameter->getID();
-            $parameter->update($input['_parameters'][$fieldTypeName][$fieldName]);
+            $parameterInput['id'] = $parameter->getID();
+            $parameter->update($parameterInput);
          }
       }
    }

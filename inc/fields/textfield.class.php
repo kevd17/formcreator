@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -49,16 +49,19 @@ class PluginFormcreatorTextField extends PluginFormcreatorField
       $additions .= '</td>';
       $additions .= '<td>';
       $value = Html::entities_deep($this->question->fields['default_values']);
-      $additions .= '<input type="text" name="default_values" id="default_values" rows="4" cols="40"'
-         .'style="width: 90%" value="'.$value.'">';
+      $additions .= Html::input(
+         'default_values', [
+            'type'  => 'text',
+            'id'    => 'default_values',
+            'value' => $value,
+         ]
+      );
       $additions .= '</td>';
-      $additions .= '<td>';
-      $additions .= '</td>';
-      $additions .= '<td>';
-      $additions .= '</td>';
+      $additions .= '<td></td>';
+      $additions .= '<td></td>';
       $additions .= '</tr>';
 
-      $common = $common = parent::getDesignSpecializationField();
+      $common = parent::getDesignSpecializationField();
       $additions .= $common['additions'];
 
       return [
@@ -70,23 +73,28 @@ class PluginFormcreatorTextField extends PluginFormcreatorField
       ];
    }
 
-   public function displayField($canEdit = true) {
+   public function getRenderedHtml($canEdit = true) {
+      if (!$canEdit) {
+         return $this->value;
+      }
+
+      $html         = '';
       $id           = $this->question->getID();
       $rand         = mt_rand();
       $fieldName    = 'formcreator_field_' . $id;
       $domId        = $fieldName . '_' . $rand;
       $defaultValue = Html::cleanInputText($this->value);
-      if ($canEdit) {
-         echo '<input type="text" class="form-control"
-                  name="' . $fieldName . '"
-                  id="' . $domId . '"
-                  value="' . $defaultValue . '" />';
-         echo Html::scriptBlock("$(function() {
-            pluginFormcreatorInitializeField('$fieldName', '$rand');
-         });");
-      } else {
-         echo $this->value;
-      }
+
+      $html .= Html::input($fieldName, [
+         'type'  => 'text',
+         'id'    => $domId,
+         'value' => $defaultValue,
+      ]);
+      $html .= Html::scriptBlock("$(function() {
+         pluginFormcreatorInitializeField('$fieldName', '$rand');
+      });");
+
+      return $html;
    }
 
    public function serializeValue() {
@@ -112,7 +120,7 @@ class PluginFormcreatorTextField extends PluginFormcreatorField
    }
 
    public function getValueForTargetText($richText) {
-      return $this->value;
+      return Toolbox::addslashes_deep($this->value);
    }
 
    public function getDocumentsForTarget() {
@@ -129,15 +137,10 @@ class PluginFormcreatorTextField extends PluginFormcreatorField
          return false;
       }
 
-      if (!$this->isValidValue($this->value)) {
-         return false;
-      }
-
-       // All is OK
-      return true;
+      return $this->isValidValue($this->value);
    }
 
-   private function isValidValue($value) {
+   public function isValidValue($value) {
       if (strlen($value) == 0) {
          return true;
       }
@@ -187,7 +190,6 @@ class PluginFormcreatorTextField extends PluginFormcreatorField
       if (!$success) {
          return [];
       }
-      $this->value = str_replace('\r\n', "\r\n", $input['default_values']);
 
       return $input;
    }
@@ -205,8 +207,7 @@ class PluginFormcreatorTextField extends PluginFormcreatorField
          return false;
       }
 
-      $this->value = str_replace('\r\n', "\r\n", $input[$key]);
-      $this->value = Toolbox::stripslashes_deep($this->value);
+      $this->value = Toolbox::stripslashes_deep($input[$key]);
       return true;
    }
 
@@ -259,5 +260,15 @@ class PluginFormcreatorTextField extends PluginFormcreatorField
       global $CFG_GLPI;
 
       return '<img src="' . $CFG_GLPI['root_doc'] . '/plugins/formcreator/pics/ui-text-field.png" title="" />';
+   }
+
+   public function isVisibleField()
+   {
+      return true;
+   }
+
+   public function isEditableField()
+   {
+      return true;
    }
 }

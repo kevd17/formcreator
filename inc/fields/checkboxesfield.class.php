@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -52,7 +52,7 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
       $additions .= Html::textarea([
          'name'             => 'default_values',
          'id'               => 'default_values',
-         'value'            => $this->question->fields['default_values'],
+         'value'            => Html::entities_deep($this->getValueForDesign()),
          'cols'             => '50',
          'display'          => false,
       ]);
@@ -64,17 +64,21 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
       $additions .= '</label>';
       $additions .= '</td>';
       $additions .= '<td>';
+      $value = json_decode($this->question->fields['values']);
+      if ($value === null) {
+         $value = [];
+      }
       $additions .= Html::textarea([
          'name'             => 'values',
          'id'               => 'values',
-         'value'            => $this->question->fields['values'],
+         'value'            => implode("\r\n", $value),
          'cols'             => '50',
          'display'          => false,
       ]);
       $additions .= '</td>';
       $additions .= '</tr>';
 
-      $common = $common = parent::getDesignSpecializationField();
+      $common = parent::getDesignSpecializationField();
       $additions .= $common['additions'];
 
       return [
@@ -86,57 +90,49 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
       ];
    }
 
-   public function displayField($canEdit = true) {
-      if ($canEdit) {
-         $id    = $this->question->getID();
-         $rand  = mt_rand();
-         $fieldName    = 'formcreator_field_' . $id;
-         $domId        = $fieldName . '_' . $rand;
-
-         $values = [];
-         $values = $this->getAvailableValues();
-         if (!empty($values)) {
-            echo '<div class="checkboxes">';
-            $i = 0;
-            foreach ($values as $value) {
-               if ((trim($value) != '')) {
-                  $i++;
-                  echo "<div class='checkbox'>";
-                  echo Html::getCheckbox([
-                     'title'         => htmlentities($value, ENT_QUOTES),
-                     'id'            => $domId.'_'.$i,
-                     'name'          => htmlentities($fieldName, ENT_QUOTES) . '[]',
-                     'value'         => htmlentities($value, ENT_QUOTES),
-                     'zero_on_empty' => false,
-                     'checked'       => in_array($value, $this->value)
-                  ]);
-                  echo '<label for="' . $domId . '_' . $i . '">';
-                  echo '&nbsp;' . $value;
-                  echo '</label>';
-                  echo "</div>";
-               }
-            }
-            echo '</div>';
-         }
-         echo Html::scriptBlock("$(function() {
-            pluginFormcreatorInitializeCheckboxes('$fieldName', '$rand');
-         });");
-
-      } else {
+   public function getRenderedHtml($canEdit = true) {
+      $html = '';
+      if (!$canEdit) {
          if (count($this->value)) {
-            echo implode('<br />', $this->value);
-         } else {
-            echo '';
+            $html .= implode('<br />', $this->value);
          }
+         return $html;
       }
-   }
 
-   /**
-    * Gets the available values for the field
-    * @return array available values
-    */
-   public function getAvailableValues() {
-      return explode("\r\n", $this->question->fields['values']);
+      $id        = $this->question->getID();
+      $rand      = mt_rand();
+      $fieldName = 'formcreator_field_' . $id;
+      $domId     = $fieldName . '_' . $rand;
+
+      $values = $this->getAvailableValues();
+      if (!empty($values)) {
+         $html .= '<div class="checkboxes">';
+         $i = 0;
+         foreach ($values as $value) {
+            if ((trim($value) != '')) {
+               $i++;
+               $html .= "<div class='checkbox'>";
+               $html .= Html::getCheckbox([
+                  'title'         => htmlentities($value, ENT_QUOTES),
+                  'id'            => $domId.'_'.$i,
+                  'name'          => htmlentities($fieldName, ENT_QUOTES) . '[]',
+                  'value'         => htmlentities($value, ENT_QUOTES),
+                  'zero_on_empty' => false,
+                  'checked'       => in_array($value, $this->value)
+               ]);
+               $html .= '<label for="' . $domId . '_' . $i . '">';
+               $html .= '&nbsp;' . $value;
+               $html .= '</label>';
+               $html .= "</div>";
+            }
+         }
+         $html .= '</div>';
+      }
+      $html .= Html::scriptBlock("$(function() {
+         pluginFormcreatorInitializeCheckboxes('$fieldName', '$rand');
+      });");
+
+      return $html;
    }
 
    public function serializeValue() {
@@ -144,12 +140,12 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
          return '';
       }
 
-      return implode("\r\n", Toolbox::addslashes_deep($this->value));
+      return Toolbox::addslashes_deep(json_encode($this->value, JSON_OBJECT_AS_ARRAY));
    }
 
    public function deserializeValue($value) {
       $this->value = ($value !== null && $value !== '')
-                  ? explode("\r\n", $value)
+                  ? json_decode($value)
                   : [];
    }
 
@@ -158,7 +154,13 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
          return '';
       }
 
-      return implode("\r\n", $this->value);
+      $value = [];
+      foreach ($this->value as $item) {
+         if (trim($item) !== '') {
+            $value[] = $item;
+         }
+      }
+      return implode("\r\n", $value);
    }
 
    public function parseAnswerValues($input, $nonDestructive = false) {
@@ -190,10 +192,26 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
          return false;
       }
 
-      return $this->isValidValue($value);
+      return true;
+
+      //return $this->isValidValue($value);
    }
 
-   private function isValidValue($value) {
+   public function isValidValue($value) {
+      if ($value === '') {
+         return true;
+      }
+
+      $value = Toolbox::stripslashes_deep($value);
+      foreach ($value as $item) {
+         if (trim($item) == '') {
+            return false;
+         }
+         if (!in_array($item, $this->getAvailableValues())) {
+            return false;
+         }
+      }
+
       $parameters = $this->getParameters();
 
       // Check the field matches the format regex
@@ -201,7 +219,7 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
          $rangeMin = $parameters['range']->fields['range_min'];
          $rangeMax = $parameters['range']->fields['range_max'];
          if ($rangeMin > 0 && count($value) < $rangeMin) {
-            $message = sprintf(__('The following question needs of at least %d answers', 'formcreator'), $rangeMin);
+            $message = sprintf(__('The following question needs at least %d answers', 'formcreator'), $rangeMin);
             Session::addMessageAfterRedirect($message . ' ' . $this->getLabel(), false, ERROR);
             return false;
          }
@@ -221,25 +239,22 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
    }
 
    public function prepareQuestionInputForSave($input) {
-      if (isset($input['values'])) {
-         if (empty($input['values'])) {
-            Session::addMessageAfterRedirect(
-                  __('The field value is required:', 'formcreator') . ' ' . $input['name'],
-                  false,
-                  ERROR);
-            return [];
-         } else {
-            $input['values'] = $this->trimValue($input['values']);
-         }
+      if (!isset($input['values']) || empty($input['values'])) {
+         Session::addMessageAfterRedirect(
+               __('The field value is required:', 'formcreator') . ' ' . $input['name'],
+               false,
+               ERROR);
+         return [];
       }
+
+      // trim values
+      $input['values'] = $this->trimValue($input['values']);
+
       if (isset($input['default_values'])) {
-         $this->value = explode('\r\n', $input['default_values']);
-         $this->value = array_map('trim', $this->value);
-         $this->value = array_filter($this->value, function($value) {
-            return ($value !== '');
-         });
-         $input['default_values'] = implode('\r\n', $this->value);
+         // trim values
+         $input['default_values'] = $this->trimValue($input['default_values']);
       }
+
       return $input;
    }
 
@@ -247,7 +262,7 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
       $value = [];
       $values = $this->getAvailableValues();
 
-      if (count($this->value) === 0) {
+      if ($values === null || count($this->value) === 0) {
          return '';
       }
 
@@ -288,7 +303,7 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
 
    public function equals($value) {
       if (!is_array($this->value)) {
-         // No checkbox enabled
+         // No selection
          return ($value === '');
       }
       return in_array($value, $this->value);
@@ -299,11 +314,27 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
    }
 
    public function greaterThan($value) {
-      throw new PluginFormcreatorComparisonException('Meaningless comparison');
+      if (count($this->value) < 1) {
+         return false;
+      }
+      foreach ($this->value as $answer) {
+         if ($answer <= $value) {
+            return false;
+         }
+      }
+      return true;
    }
 
    public function lessThan($value) {
-      throw new PluginFormcreatorComparisonException('Meaningless comparison');
+      if (count($this->value) < 1) {
+         return false;
+      }
+      foreach ($this->value as $answer) {
+         if ($answer >= $value) {
+            return false;
+         }
+      }
+      return true;
    }
 
    public function isAnonymousFormCompatible() {
@@ -312,5 +343,15 @@ class PluginFormcreatorCheckboxesField extends PluginFormcreatorField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-check-square" aria-hidden="true"></i>';
+   }
+
+   public function isVisibleField()
+   {
+      return true;
+   }
+
+   public function isEditableField()
+   {
+      return true;
    }
 }

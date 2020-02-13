@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -330,7 +330,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
 
       switch ($field) {
          case 'status' :
-            $elements = $this->getStatuses();
+            $elements = self::getStatuses();
             $output = Dropdown::showFromArray($name, $elements, ['display' => false, 'value' => $values[$field]]);
             return $output;
             break;
@@ -430,9 +430,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
          return false;
       }
 
-      $form = new PluginFormcreatorForm();
-      $formId = $this->fields[PluginFormcreatorForm::getForeignKeyField()];
-      $form->getFromDB($formId);
+      $form = $this->getForm();
       switch ($form->fields['validation_required']) {
          case PluginFormcreatorForm_Validator::VALIDATION_USER:
             return (Session::getLoginUserID() == $this->fields['users_id_validator']);
@@ -446,7 +444,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
                   'FROM'   => PluginFormcreatorForm_Validator::getTable(),
                   'WHERE'  => [
                      'itemtype'                    => Group::class,
-                     'plugin_formcreator_forms_id' => $formId
+                     'plugin_formcreator_forms_id' => $form->getID()
                   ]
                ])
             ];
@@ -459,29 +457,49 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
    }
 
    public function showForm($ID, $options = []) {
-      global $DB;
-
       if (!isset($ID) || !$this->getFromDB($ID)) {
          Html::displayNotFoundError();
       }
       $options = ['canedit' => false];
 
       // Print css media
-      echo Html::css(FORMCREATOR_ROOTDOC."/css/print_form_answer.css", ['media' => 'print']);
+      echo Html::css("plugins/formcreator/css/print_form.css", ['media' => 'print']);
 
-      // start form
-      echo "<div class='form_answer'>";
-      $this->initForm($ID, $options);
-      $this->showFormHeader($options);
+      $style = "<style>";
+      // force colums width
+      $width_percent = 100 / PluginFormcreatorSection::COLUMNS;
+      for ($i = 0; $i < PluginFormcreatorSection::COLUMNS; $i++) {
+         $width = ($i+1) * $width_percent;
+         $style.= '
+         #plugin_formcreator_form.plugin_formcreator_form [data-itemtype = "PluginFormcreatorQuestion"][data-gs-width="' . ($i+1) . '"],
+         #plugin_formcreator_form.plugin_formcreator_form .plugin_formcreator_gap[data-gs-width="' . ($i+1) . '"]
+         {
+            min-width: $width_percent%;
+            width: ' . $width . '%;
+         }
+         ';
+      }
+      $style.= "</style>";
+      echo $style;
 
-      $form = new PluginFormcreatorForm();
-      $formId = $this->fields['plugin_formcreator_forms_id'];
-      $form->getFromDB($formId);
+      $formName = 'plugin_formcreator_form';
+      self::getFormURL();
+      echo '<form name="' . $formName . '" method="post" role="form" enctype="multipart/form-data"'
+      . ' class="plugin_formcreator_form"'
+      . ' action="' . self::getFormURL() . '"'
+      . ' id="plugin_formcreator_form"'
+      . '>';
+
+      $form = $this->getForm();
 
       $canEdit = $this->fields['status'] == self::STATUS_REFUSED
                  && $_SESSION['glpiID'] == $this->fields['requester_id'];
 
-      echo '<tr><td colspan="4" class="formcreator_form form_horizontal">';
+      // form title
+      echo "<h1 class='form-title'>";
+      echo $this->fields['name'] . "&nbsp;";
+      echo '<i class="pointer print_button fas fa-print" title="' . __("Print this form", 'formcreator') . '" onclick="window.print();"></i>';
+      echo '</h1>';
 
       // Form Header
       echo '<div class="form_header">';
@@ -492,7 +510,64 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
       if (!empty($form->fields['content'])) {
          echo html_entity_decode($form->fields['content']);
       }
-      echo '</div>';
+
+      echo '<ol>';
+      $sections = (new PluginFormcreatorSection)->getSectionsFromForm($form->getID());
+      foreach ($sections as $section) {
+         $sectionId = $section->getID();
+
+         // Section header
+         echo '<li'
+         . ' class="plugin_formcreator_section"'
+         . ' data-itemtype="' . PluginFormcreatorSection::class . '"'
+         . ' data-id="' . $sectionId . '"'
+         . '">';
+
+         // section name
+         echo '<h2>';
+         echo empty($section->fields['name']) ? '(' . $sectionId . ')' : $section->fields['name'];
+         echo '</h2>';
+
+         // Section content
+         echo '<div>';
+
+         // Get fields populated with answers
+         $answers = $this->getAnswers(
+            $this->getID(),
+            [
+               PluginFormcreatorSection::getForeignKeyField() => $section->getID(),
+            ]
+         );
+
+         // Display all fields of the section
+         $lastQuestion = null;
+         $questions = (new PluginFormcreatorQuestion)->getQuestionsFromSection($sectionId);
+         foreach ($questions as $question) {
+            if ($lastQuestion !== null) {
+               if ($lastQuestion->fields['row'] < $question->fields['row']) {
+                  // the question begins a new line
+                  echo '<div class="plugin_formcreator_newRow"></div>';
+               } else {
+                  $x = $lastQuestion->fields['col'] + $lastQuestion->fields['width'];
+                  $width = $question->fields['col'] - $x;
+                  if ($x < $question->fields['col']) {
+                     // there is an horizontal gap between previous question and current one
+                     echo '<div class="plugin_formcreator_gap" data-gs-x="' . $x . '" data-gs-width="' . $width . '"></div>';
+                  }
+               }
+            }
+            echo $question->getRenderedHtml($canEdit, $answers);
+            $lastQuestion = $question;
+         }
+         echo '</div>';
+
+         echo '</li>';
+      }
+      if ($canEdit) {
+         echo Html::scriptBlock('$(function() {
+            plugin_formcreator.showFields($("form[name=\'form\']"));
+         })');
+      }
 
       if ($this->fields['status'] == self::STATUS_REFUSED) {
          echo '<div class="refused_header">';
@@ -603,7 +678,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
 
       // Display submit button
       if (($this->fields['status'] == self::STATUS_REFUSED) && ($_SESSION['glpiID'] == $this->fields['requester_id'])) {
-         echo '<div class="form-group line'.(($questionsCount + 1) % 2).'">';
+         echo '<div class="form-group">';
          echo '<div class="center">';
          echo '<input type="submit" name="save_formanswer" class="submit_button" value="'.__('Save').'" />';
          echo '</div>';
@@ -614,7 +689,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
          echo '<div class="form-group required line1">';
          echo '<label for="comment">' . __('Comment', 'formcreator') . ' <span class="red">*</span></label>';
          Html::textarea([
-            'name' => 'comment', 
+            'name' => 'comment',
             'value' => $this->fields['comment']
          ]);
          echo '<div class="help-block">' . __('Required if refused', 'formcreator') . '</div>';
@@ -708,7 +783,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
       $input['entities_id'] = isset($_SESSION['glpiactive_entity'])
                             ? $_SESSION['glpiactive_entity']
                             : $form->fields['entities_id'];
-      
+
       $input['is_recursive']                = $form->fields['is_recursive'];
       $input['plugin_formcreator_forms_id'] = $form->getID();
       $input['requester_id']                = isset($_SESSION['glpiID'])
@@ -719,7 +794,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
       $input['status']                      = $status;
       $input['request_date']                = date('Y-m-d H:i:s');
       $input['comment']                     = '';
-                
+
       return $input;
    }
 
@@ -749,14 +824,14 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
     */
    public function saveAnswers(PluginFormcreatorForm $form, $data, $fields) {
       $formanswers_id = isset($data['id'])
-                        ? intval($data['id'])
+                        ? (int) $data['id']
                         : -1;
 
       $question = new PluginFormcreatorQuestion();
       $questions = $question->getQuestionsFromForm($form->getID());
 
-      // Update form answers
       if (isset($data['save_formanswer'])) {
+         // Update form answers
          $status = $data['status'];
          $this->update([
             'id'        => $formanswers_id,
@@ -907,11 +982,11 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
          return false;
       }
 
-      $fields = $form->getFields();
-      foreach ($fields as $id => $question) {
-         $fields[$id]->parseAnswerValues($input);
+      $this->questionFields = $form->getFields();
+      foreach ($this->questionFields as $id => $question) {
+         $this->questionFields[$id]->parseAnswerValues($input);
       }
-      return $this->saveAnswers($form, $input, $fields);
+      return $this->saveAnswers($form, $input, $this->questionFields);
    }
 
    /**
@@ -923,8 +998,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
       $success = true;
 
       // Get all targets
-      $form = new PluginFormcreatorForm();
-      $form->getFromDB($this->fields['plugin_formcreator_forms_id']);
+      $form = $this->getForm();
       $all_targets = $form->getTargetsFromForm();
 
       $CFG_GLPI['plugin_formcreator_disable_hook_create_ticket'] = '1';
@@ -933,6 +1007,19 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
       $generatedTargets = new PluginFormcreatorComposite(new PluginFormcreatorItem_TargetTicket(), new Ticket_Ticket());
       foreach ($all_targets as $targetType => $targets) {
          foreach ($targets as $targetObject) {
+            // Check the condition of the target
+            $this->questionFields = $form->getFields();
+            $answers_values = $this->getAnswers($this->getID());
+            foreach ($this->questionFields as $id => $field) {
+               $this->questionFields[$id]->deserializeValue($answers_values['formcreator_field_' . $id]);
+            }
+
+            if (!PluginFormcreatorFields::isVisible($targetObject, $this->questionFields)) {
+               // The target shall not be generated
+               continue;
+            }
+
+            // Generate the target
             $generatedTarget = $targetObject->save($this);
             if ($generatedTarget === null) {
                $success = false;
@@ -1010,12 +1097,10 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
 
       // retrieve answers
       $answers_values = $this->getAnswers($this->getID());
-      $form = new PluginFormcreatorForm();
-      $form->getFromDB($this->fields['plugin_formcreator_forms_id']);
+      $form = $this->getForm();
       $fields = $form->getFields();
       foreach ($fields as $questionId => $question) {
-         $answer = $answers_values['formcreator_field_' . $questionId];
-         $fields[$questionId]->deserializeValue($answer);
+         $fields[$questionId]->deserializeValue($answers_values['formcreator_field_' . $questionId]);
       }
 
       // TODO: code very close to PluginFormcreatorTargetBase::parseTags() (factorizable ?)
@@ -1051,7 +1136,8 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
          'ORDER' => [
             "$sectionTable.order ASC",
             "$sectionTable.id ASC",
-            "$questionTable.order *ASC",
+            "$questionTable.row *ASC",
+            "$questionTable.col *ASC",
          ],
       ]);
       $last_section = "";
@@ -1129,7 +1215,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
       }
       $this->createIssue();
       Session::addMessageAfterRedirect(__('The form has been successfully saved!', 'formcreator'), true, INFO);
-   } 
+   }
 
    public function post_updateItem($history = 1) {
       $this->sendNotification();
@@ -1190,8 +1276,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
          ->getQuestionsFromForm($this->fields[$formFk]);
 
       // Prepare all fields of the form
-      $form = new PluginFormcreatorForm();
-      $form->getFromDB($this->fields[$formFk]);
+      $form = $this->getForm();
       $fields = $form->getFields();
       foreach ($questions as $questionId => $question) {
          $answer = $answers_values['formcreator_field_' . $questionId];
@@ -1243,8 +1328,11 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
       $fieldValidities = [];
 
       $this->questionFields = $form->getFields();
-      foreach ($this->questionFields as $id => $question) {
-         $fieldValidities[$id] = $this->questionFields[$id]->parseAnswerValues($input);
+      foreach (array_keys($this->questionFields) as $id) {
+         // Test integrity of the value
+         $key = "formcreator_field_$id";
+         $this->questionFields[$id]->parseAnswerValues($input);
+         $fieldValidities[$id] = $this->questionFields[$id]->isValidValue($input[$key]);
       }
       // any invalid field will invalidate the answers
       $valid = !in_array(false, $fieldValidities, true);
@@ -1292,8 +1380,7 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
             break;
          case self::STATUS_ACCEPTED :
             // Notify the requester
-            $form = new PluginFormcreatorForm();
-            $form->getFromDB($this->fields['plugin_formcreator_forms_id']);
+            $form = $this->getForm();
             if ($form->fields['validation_required'] != PluginFormcreatorForm::VALIDATION_NONE) {
                NotificationEvent::raiseEvent('plugin_formcreator_accepted', $this);
             } else {
@@ -1445,5 +1532,110 @@ class PluginFormcreatorFormAnswer extends CommonDBTM
             'status'          => $this->fields['status'],
          ]);
       }
+   }
+
+   /**
+    * @param integer $limit The N last answers found
+    * @return DBMysqlIterator
+    */
+   public static function getMyLastAnswersAsRequester($limit = 5) {
+      global $DB;
+
+      $formAnswerTable = self::getTable();
+      $formTable = PluginFormcreatorForm::getTable();
+      $request = [
+         'SELECT' => [
+            $formTable => ['name'],
+            $formAnswerTable => ['id', 'status', 'request_date'],
+         ],
+         'FROM' => $formTable,
+         'INNER JOIN' => [
+            $formAnswerTable => [
+               'FKEY' => [
+                  $formTable => 'id',
+                  $formAnswerTable => PluginFormcreatorForm::getForeignKeyField(),
+               ]
+            ]
+         ],
+         'WHERE' => [
+            "$formAnswerTable.requester_id" => Session::getLoginUserID(),
+            "$formTable.is_deleted" => 0,
+         ],
+         'ORDER' => [
+            "$formAnswerTable.status ASC",
+            "$formAnswerTable.request_date DESC",
+         ],
+         'LIMIT' => $limit,
+      ];
+
+      return $DB->request($request);
+   }
+
+   /**
+    * @param integer $limit The N last answers found
+    * @return DBMysqlIterator
+    */
+   public static function getMyLastAnswersAsValidator($limit = 5) {
+      global $DB;
+
+      $userId = Session::getLoginUserID();
+      $groupList = Group_User::getUserGroups($userId);
+      $groupIdList = [];
+      foreach ($groupList as $group) {
+         $groupIdList[] = $group['id'];
+      }
+
+      $formAnswerTable = self::getTable();
+      $formTable = PluginFormcreatorForm::getTable();
+      $validatorTable = PluginFormcreatorForm_Validator::getTable();
+      $formFk = PluginFormcreatorForm::getForeignKeyField();
+      $request = [
+         'SELECT' => [
+            $formTable => ['name'],
+            $formAnswerTable => ['id', 'status', 'request_date'],
+         ],
+         'FROM' => $formTable,
+         'INNER JOIN' => [
+            $formAnswerTable => [
+               'FKEY' => [
+                  $formTable => 'id',
+                  $formAnswerTable => PluginFormcreatorForm::getForeignKeyField(),
+               ]
+            ],
+            $validatorTable => [
+               'FKEY' => [
+                  $validatorTable => $formFk,
+                  $formTable => 'id'
+               ]
+            ]
+         ],
+         'WHERE' => [
+            'OR' => [
+               [
+                  'AND' => [
+                     "$formTable.validation_required" => 1,
+                     "$validatorTable.itemtype" => User::class,
+                     "$validatorTable.items_id" => $userId,
+                     "$formAnswerTable.users_id_validator" => $userId
+                  ]
+               ],
+               [
+                  'AND' => [
+                     "$formTable.validation_required" => 2,
+                     "$validatorTable.itemtype" => Group::class,
+                     "$validatorTable.items_id" => $groupIdList + ['NULL', '0', ''],
+                     "$formAnswerTable.groups_id_validator" => $groupIdList + ['NULL', '0', ''],
+                  ]
+               ]
+            ]
+         ],
+         'ORDER' => [
+            "$formAnswerTable.status ASC",
+            "$formAnswerTable.request_date DESC",
+         ],
+         'LIMIT' => $limit,
+      ];
+
+      return $DB->request($request);
    }
 }

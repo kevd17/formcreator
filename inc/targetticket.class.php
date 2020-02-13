@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -40,6 +40,11 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
    const ASSOCIATE_RULE_NONE = 1;
    const ASSOCIATE_RULE_SPECIFIC = 2;
    const ASSOCIATE_RULE_ANSWER = 3;
+
+   const REQUESTTYPE_NONE = 0;
+   const REQUESTTYPE_SPECIFIC = 1;
+   const REQUESTTYPE_ANSWER = 2;
+
 
    public static function getTypeName($nb = 1) {
       return _n('Target ticket', 'Target tickets', $nb, 'formcreator');
@@ -86,6 +91,14 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
       ];
    }
 
+   public static function getEnumRequestTypeRule() {
+      return [
+         self::REQUESTTYPE_NONE      => __('Default or from a template', 'formcreator'),
+         self::REQUESTTYPE_SPECIFIC  => __('Specific type', 'formcreator'),
+         self::REQUESTTYPE_ANSWER    => __('Equals to the answer to the question', 'formcreator'),
+      ];
+   }
+
    /**
     * Show the Form for the adminsitrator to edit in the config page
     *
@@ -93,18 +106,30 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
     * @return void
     */
    public function showForm($ID, $options = []) {
+      if ($ID == 0) {
+         // Not used for now
+         $title =  __('Add a target ', 'formcreator');
+      } else {
+         $title =  __('Edit a target', 'formcreator');
+      }
       $rand = mt_rand();
 
       $form = $this->getForm();
 
+      // TODO: remive the fixed width
       echo '<div class="center" style="width: 950px; margin: 0 auto;">';
-      echo '<form name="form_target" method="post" action="' . self::getFormURL() . '">';
+      echo '<form name="form"'
+      . ' method="post"'
+      . ' action="' . self::getFormURL() . '"'
+      . ' data-itemtype="' . self::class . '"'
+      . '>';
 
       // General information: target_name
       echo '<table class="tab_cadre_fixe">';
-      echo '<tr><th colspan="2">' . __('Edit a destination', 'formcreator') . '</th></tr>';
-      echo '<tr class="line1">';
+      echo '<tr><th colspan="2">' . $title . '</th></tr>';
+      echo '<tr>';
       echo '<td width="15%"><strong>' . __('Name') . ' <span style="color:red;">*</span></strong></td>';
+      // TODO: remive the fixed width
       echo '<td width="85%"><input type="text" name="name" style="width:704px;" value="' . $this->fields['name'] . '" /></td>';
       echo '</tr>';
       echo '</table>';
@@ -119,7 +144,7 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
       echo '<td colspan="3"><input type="text" name="target_name" style="width:704px;" value="' . $this->fields['target_name'] . '"/></td>';
       echo '</tr>';
 
-      echo '<tr class="line0">';
+      echo '<tr>';
       echo '<td><strong>' . __('Description') . ' <span style="color:red;">*</span></strong></td>';
       echo '<td colspan="3">';
       echo Html::textarea([
@@ -134,7 +159,7 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
       $rand = mt_rand();
       $this->showDestinationEntitySetings($rand);
 
-      echo '<tr class="line1">';
+      echo '<tr>';
       $this->showTemplateSettings($rand);
       $this->showDueDateSettings($form, $rand);
       echo '</tr>';
@@ -173,7 +198,7 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
       //  Validation as ticket followup
       // -------------------------------------------------------------------------------------------
       if ($form->fields['validation_required']) {
-         echo '<tr class="line1">';
+         echo '<tr>';
          echo '<td colspan="4">';
          echo '<input type="hidden" name="validation_followup" value="0" />';
          echo '<input type="checkbox" name="validation_followup" id="validation_followup" value="1" ';
@@ -188,17 +213,33 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
          echo '</tr>';
       }
 
+      // -------------------------------------------------------------------------------------------
+      //  Conditions to generate the target
+      // -------------------------------------------------------------------------------------------
+      echo '<tr>';
+      echo '<th colspan="4">';
+      echo __('Condition to show the target', 'formcreator');
+      echo '</label>';
+      echo '</th>';
+      echo '</tr>';
+      $this->showConditionsSettings($rand);
+
       echo '</table>';
 
       // Buttons
       echo '<table class="tab_cadre_fixe">';
 
-      echo '<tr class="line1">';
+      echo '<tr>';
+      echo '<td colspan="4" class="center">';
+      $formFk = PluginFormcreatorForm::getForeignKeyField();
+      echo Html::hidden('id', ['value' => $ID]);
+      echo Html::hidden($formFk, ['value' => $this->fields[$formFk]]);
+      echo '</td>';
+      echo '</tr>';
+
+      echo '<tr>';
       echo '<td colspan="5" class="center">';
-      echo '<input type="reset" name="reset" class="submit_button" value="' . __('Cancel', 'formcreator') . '"
-               onclick="document.location = \'form.form.php?id=' . $this->fields['plugin_formcreator_forms_id'] . '\'" /> &nbsp; ';
-      echo '<input type="hidden" name="id" value="' . $this->getID() . '" />';
-      echo '<input type="submit" name="update" class="submit_button" value="' . __('Save') . '" />';
+      echo Html::submit(_x('button', 'Save'), ['name' => 'update']);
       echo '</td>';
       echo '</tr>';
 
@@ -218,7 +259,7 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
    protected function showCompositeTicketSettings($rand) {
       global $DB;
 
-      echo '<tr class="line1">';
+      echo '<tr>';
       echo '<td>';
       echo __('Link to an other ticket', 'formcreator');
       echo "<span class='fa fa-plus pointer' onClick=\"".Html::jsShow("plugin_formcreator_linked_items$rand")."\"
@@ -288,18 +329,19 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
 
       // show already linked items
       foreach ($rows as $row) {
-         $icons = '&nbsp;'.Html::getSimpleForm(PluginFormcreatorItem_TargetTicket::getFormURL(), 'purge',
-               _x('button', 'Delete permanently'),
-               ['id'                => $row['id']],
-               'fa-times-circle');
-               $itemtype = $row['itemtype'];
-               $item = new $itemtype();
-               $item->getFromDB($row['items_id']);
+         $icons = '&nbsp;'.Html::getSimpleForm(
+            PluginFormcreatorItem_TargetTicket::getFormURL(),
+            'purge',
+            _x('button', 'Delete permanently'),
+            ['id' => $row['id']],
+            'fa-times-circle'
+         );
+         $itemtype = $row['itemtype'];
+         $item = new $itemtype();
+         $item->getFromDB($row['items_id']);
          switch ($itemtype) {
             case Ticket::getType():
-               //TODO: when merge of https://github.com/glpi-project/glpi/pull/2840 (this is a BC)
-               //echo Ticket_Ticket::getLinkName($row['link']);
-               echo PluginFormcreatorCommon::getLinkName($row['link']);
+               echo Ticket_Ticket::getLinkName($row['link']);
                echo ' ';
                echo $itemtype::getTypeName();
                echo ' ';
@@ -309,9 +351,7 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
                break;
 
             case PluginFormcreatorTargetTicket::getType():
-               // TODO: when merge of https://github.com/glpi-project/glpi/pull/2840 (this is a BC)
-               //echo Ticket_Ticket::getLinkName($row['link']);
-               echo PluginFormcreatorCommon::getLinkName($row['link']);
+               echo Ticket_Ticket::getLinkName($row['link']);
                echo ' ';
                echo $itemtype::getTypeName();
                echo ' ';
@@ -371,6 +411,16 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
                break;
             default:
                $input['urgency_question'] = '0';
+         }
+
+         $input['type_question'] = '0';
+         switch ($input['type_rule']) {
+            case self::REQUESTTYPE_ANSWER:
+               $input['type_question'] = $input['_type_question'];
+               break;
+            case self::REQUESTTYPE_SPECIFIC:
+               $input['type_question'] = $input['_type_specific'];
+               break;
          }
 
          switch ($input['category_rule']) {
@@ -439,7 +489,25 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
          return false;
       }
 
+      // delete conditions
+      if (! (new PluginFormcreatorCondition())->deleteByCriteria([
+         'itemtype' => self::class,
+         'items_id' => $this->getID(),
+      ])) {
+         return false;
+      }
+
       return true;
+   }
+
+   public function post_addItem() {
+      parent::post_addItem();
+      $this->updateConditions($this->input);
+   }
+
+   public function post_updateItem($history = 1) {
+      parent::post_updateItem();
+      $this->updateConditions($this->input);
    }
 
    /**
@@ -745,21 +813,79 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
       return $data;
    }
 
+   protected function setTargetType($data, $formanswer) {
+      global $DB;
+
+      $type = null;
+      switch ($this->fields['type_rule']) {
+         case self::REQUESTTYPE_ANSWER:
+            $type = $DB->request([
+               'SELECT' => ['answer'],
+               'FROM'   => PluginFormcreatorAnswer::getTable(),
+               'WHERE'  => [
+                  'plugin_formcreator_formanswers_id' => $formanswer->getID(),
+                  'plugin_formcreator_questions_id'   => $this->fields['type_question']
+               ]
+            ])->next();
+            $type = $type['answer'];
+            break;
+         case self::REQUESTTYPE_SPECIFIC:
+            $type = $this->fields['type_question'];
+            break;
+         default:
+            $type = null;
+      }
+      if (!is_null($type)) {
+         $data['type'] = $type;
+      }
+
+      return $data;
+   }
+
    protected  function showTypeSettings($rand) {
-      echo '<tr class="line0">';
-      echo '<td width="15%">' . __('Type') . '</td>';
+      echo '<tr>';
+      echo '<td width="15%">' . __('Request type') . '</td>';
       echo '<td width="25%">';
-      Ticket::dropdownType('type', ['value' => $this->fields['type'], 'rand' => $rand]);
+      Dropdown::showFromArray('type_rule', static::getEnumRequestTypeRule(), [
+            'value' => $this->fields['type_rule'],
+            'rand' => $rand,
+            'on_change' => "plugin_formcreator_changeRequestType($rand)",
+         ]
+      );
+      echo Html::scriptBlock("plugin_formcreator_changeRequestType($rand);");
       echo '</td>';
-      echo '<td></td>';
-      echo '<td></td>';
+      echo '<td width="15%">';
+      echo '<span id="requesttype_question_title" style="display: none">' . __('Question', 'formcreator') . '</span>';
+      echo '<span id="requesttype_specific_title" style="display: none">' . __('Type ', 'formcreator') . '</span>';
+      echo '</td>';
+      echo '<td width="25%">';
+      echo '<div id="requesttype_specific_value" style="display: none">';
+      Ticket::dropdownType('_type_specific',
+         [
+            'value'   => $this->fields['type_question'],
+         ]
+      );
+      echo '</div>';
+      echo '<div id="requesttype_question_value" style="display: none">';
+      PluginFormcreatorQuestion::dropdownForForm(
+         $this->getForm()->getID(),
+         [
+            'fieldtype' => ['requesttype'],
+         ],
+         '_type_question',
+         [
+            'value' => $this->fields['type_question']
+         ]
+      );
+      echo '</div>';
+      echo '</td>';
       echo '</tr>';
    }
 
    protected function showAssociateSettings($rand) {
       global $CFG_GLPI;
 
-      echo '<tr class="line0">';
+      echo '<tr>';
       echo '<td width="15%">' . __('Associated elements') . '</td>';
       echo '<td width="45%">';
       Dropdown::showFromArray('associate_rule', static::getEnumAssociateRule(), [
@@ -858,20 +984,6 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
       return $data;
    }
 
-   protected function setTargetType($data, $formanswer) {
-      switch ($this->fields['type']) {
-         case Ticket::INCIDENT_TYPE:
-            $data['type'] = Ticket::INCIDENT_TYPE;
-            break;
-
-         case Ticket::DEMAND_TYPE:
-            $data['type'] = Ticket::DEMAND_TYPE;
-            break;
-      }
-
-      return $data;
-   }
-
    public static function import(PluginFormcreatorLinker $linker, $input = [], $containerId = 0) {
       global $DB;
 
@@ -880,6 +992,8 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
       }
 
       $formFk = PluginFormcreatorForm::getForeignKeyField();
+      $input[$formFk] = $containerId;
+      $input['_skip_checks'] = true;
 
       $item = new self;
       // Find an existing target to update, only if an UUID is available
@@ -895,8 +1009,10 @@ class PluginFormcreatorTargetTicket extends PluginFormcreatorTargetBase
          );
       }
 
-      $input['_skip_checks'] = true;
-      $input[$formFk] = $containerId;
+      // Escape text fields
+      foreach (['target_name'] as $key) {
+         $input[$key] = $DB->escape($input[$key]);
+      }
 
       // Assume that all questions are already imported
       // convert question uuid into id

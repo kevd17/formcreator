@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -33,9 +33,9 @@ global $CFG_GLPI;
 // Version of the plugin
 define('PLUGIN_FORMCREATOR_VERSION', '2.9.1');
 // Schema version of this version
-define('PLUGIN_FORMCREATOR_SCHEMA_VERSION', '2.9');
+define('PLUGIN_FORMCREATOR_SCHEMA_VERSION', '2.11');
 // is or is not an official release of the plugin
-define('PLUGIN_FORMCREATOR_IS_OFFICIAL_RELEASE', true);
+define('PLUGIN_FORMCREATOR_IS_OFFICIAL_RELEASE', false);
 
 // Minimal GLPI version, inclusive
 define ('PLUGIN_FORMCREATOR_GLPI_MIN_VERSION', '9.4');
@@ -162,7 +162,7 @@ function plugin_init_formcreator() {
          if (strpos($_SERVER['REQUEST_URI'], "front/helpdesk.public.php") !== false) {
             if (!isset($_POST['newprofile']) && !isset($_GET['active_entity'])) {
                // Not changing profile or active entity
-               if (isset($_SESSION['glpiactiveprofile']['interface'])
+               if (Session::getCurrentInterface() !== false
                      && isset($_SESSION['glpiactive_entity'])) {
                   // Interface and active entity are set in session
                   if (plugin_formcreator_replaceHelpdesk()) {
@@ -186,7 +186,7 @@ function plugin_init_formcreator() {
          if (isset($_SESSION['glpiID'])) {
             // If user have acces to one form or more, add link
             if (PluginFormcreatorForm::countAvailableForm() > 0) {
-               $PLUGIN_HOOKS['menu_toadd']['formcreator']['helpdesk'] = 'PluginFormcreatorFormlist';
+               $PLUGIN_HOOKS['menu_toadd']['formcreator']['helpdesk'] = PluginFormcreatorFormlist::class;
             }
 
             // Add a link in the main menu plugins for technician and admin panel
@@ -225,6 +225,7 @@ function plugin_init_formcreator() {
                || strpos($_SERVER['REQUEST_URI'], 'formcreator/front/formlist.php') !== false
                || strpos($_SERVER['REQUEST_URI'], 'formcreator/front/wizard.php') !== false) {
             $PLUGIN_HOOKS['add_javascript']['formcreator'][] = 'lib/slinky/assets/js/jquery.slinky.js';
+            $PLUGIN_HOOKS['add_javascript']['formcreator'][] = 'lib/masonry.pkgd.min.js';
          }
 
          Plugin::registerClass(PluginFormcreatorForm::class, ['addtabon' => Central::class]);
@@ -244,11 +245,15 @@ function plugin_init_formcreator() {
       if (strpos($_SERVER['REQUEST_URI'], 'plugins/formcreator') !== false
          || strpos($_SERVER['REQUEST_URI'], 'central.php') !== false
          || isset($_SESSION['glpiactiveprofile']) &&
-            $_SESSION['glpiactiveprofile']['interface'] == 'helpdesk') {
+            Session::getCurrentInterface() == 'helpdesk') {
 
          // Add specific JavaScript
          $PLUGIN_HOOKS['add_javascript']['formcreator'][] = 'js/scripts.js.php';
       }
+
+      //Html::requireJs('gridstack');
+      $CFG_GLPI['javascript']['admin'][PluginFormcreatorForm::class] = 'gridstack';
+      $CFG_GLPI['javascript']['helpdesk'][PluginFormcreatorFormlist::class] = 'gridstack';
    }
 }
 
@@ -294,16 +299,14 @@ function plugin_formcreator_decode($string) {
 
 /**
  * Tells if helpdesk replacement is enabled for the current user
- * 
+ *
  * @return boolean|integer
  */
 function plugin_formcreator_replaceHelpdesk() {
-   if (isset($_SESSION['glpiactiveprofile']['interface'])
-         && isset($_SESSION['glpiactive_entity'])) {
+   if (Session::getCurrentInterface() !== false && isset($_SESSION['glpiactive_entity'])) {
       // Interface and active entity are set in session
       $helpdeskMode = PluginFormcreatorEntityconfig::getUsedConfig('replace_helpdesk', $_SESSION['glpiactive_entity']);
-      if ($helpdeskMode != '0'
-            && $_SESSION['glpiactiveprofile']['interface'] == 'helpdesk') {
+      if ($helpdeskMode != '0' && Session::getCurrentInterface() == 'helpdesk') {
          return $helpdeskMode;
       }
    }

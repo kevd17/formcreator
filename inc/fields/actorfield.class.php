@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -68,7 +68,7 @@ class PluginFormcreatorActorField extends PluginFormcreatorField
       $additions .= '</td>';
       $additions .= '</tr>';
 
-      $common = $common = parent::getDesignSpecializationField();
+      $common = parent::getDesignSpecializationField();
       $additions .= $common['additions'];
 
       return [
@@ -84,46 +84,51 @@ class PluginFormcreatorActorField extends PluginFormcreatorField
       return _n('Actor', 'Actors', 1, 'formcreator');
    }
 
-   public function displayField($canEdit = true) {
-      if ($canEdit) {
-         $value = $this->sanitizeValue($this->value);
-         $initialValue = [];
-         foreach ($value as $id => $item) {
-            $initialValue[] = [
-               'id'     => $id,
-               'text'   => $item,
-            ];
-         }
-         $initialValue = json_encode($initialValue);
-         $id           = $this->question->getID();
-         $rand         = mt_rand();
-         $fieldName    = 'formcreator_field_' . $id;
-         $domId        = $fieldName . '_' . $rand;
-
-         // Value needs to be non empty to allow execition of select2's initSelection
-         echo '<select multiple
-            name="' . $fieldName . '[]"
-            id="' . $domId . '"
-            value=""></select>';
-         echo Html::scriptBlock("$(function() {
-            pluginFormcreatorInitializeActor('$fieldName', '$rand', '$initialValue');
-         });");
-      } else {
+   public function getRenderedHtml($canEdit = true) {
+      $html = '';
+      if (!$canEdit) {
          if (empty($this->value)) {
-            echo '';
-         } else {
-            foreach ($this->value as $item) {
-               if (filter_var($item, FILTER_VALIDATE_EMAIL) !== false) {
-                  $value[] = $item;
-               } else {
-                  $user = new User();
-                  $user->getFromDB($item);
-                  $value[] = $user->getRawName();
-               }
-            }
-            echo implode('<br>', $value);
+            return '';
          }
+
+         $value = [];
+         foreach ($this->value as $item) {
+            if (filter_var($item, FILTER_VALIDATE_EMAIL) !== false) {
+               $value[] = $item;
+            } else {
+               $user = new User();
+               $user->getFromDB($item);
+               $value[] = $user->getRawName();
+            }
+         }
+         $html .= implode('<br>', $value);
+         return $html;
       }
+
+      $value = $this->sanitizeValue($this->value);
+      $initialValue = [];
+      foreach ($value as $id => $item) {
+         $initialValue[] = [
+            'id'     => $id,
+            'text'   => $item,
+         ];
+      }
+      $initialValue = json_encode($initialValue);
+      $id           = $this->question->getID();
+      $rand         = mt_rand();
+      $fieldName    = 'formcreator_field_' . $id;
+      $domId        = $fieldName . '_' . $rand;
+
+      // Value needs to be non empty to allow execition of select2's initSelection
+      $html .= '<select multiple
+         name="' . $fieldName . '[]"
+         id="' . $domId . '"
+         value=""></select>';
+      $html .= Html::scriptBlock("$(function() {
+         pluginFormcreatorInitializeActor('$fieldName', '$rand', '$initialValue');
+      });");
+
+      return $html;
    }
 
    public function serializeValue() {
@@ -238,6 +243,31 @@ class PluginFormcreatorActorField extends PluginFormcreatorField
       return true;
    }
 
+   public function isValidValue($value) {
+      if ($value === '') {
+         return true;
+      }
+
+      foreach ($value as $item) {
+         $item = trim($item);
+         if (filter_var($item, FILTER_VALIDATE_EMAIL) !== false) {
+            continue;
+         } else if (!empty($item)) {
+            $user = new User();
+            if (!$user->getFromDB($item)) {
+               Session::addMessageAfterRedirect(
+                  sprintf(__('User not found or invalid email address: %s', 'formcreator'), $this->getLabel()),
+                  false,
+                  ERROR
+               );
+               return false;
+            }
+         }
+      }
+
+      return true;
+   }
+
    public static function canRequire() {
       return true;
    }
@@ -327,5 +357,15 @@ class PluginFormcreatorActorField extends PluginFormcreatorField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-user" aria-hidden="true"></i>';
+   }
+
+   public function isVisibleField()
+   {
+      return true;
+   }
+
+   public function isEditableField()
+   {
+      return true;
    }
 }

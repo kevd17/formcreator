@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -83,35 +83,6 @@ class PluginFormcreatorCommon {
    }
 
    /**
-    * Get Link Name
-    *
-    * @param integer $value    Current value
-    * @param boolean $inverted Whether to invert label
-    *
-    * @return string
-    */
-   public static function getLinkName($value, $inverted = false) {
-      $tmp = [];
-
-      if (!$inverted) {
-         $tmp[Ticket_Ticket::LINK_TO]        = __('Linked to');
-         $tmp[Ticket_Ticket::DUPLICATE_WITH] = __('Duplicates');
-         $tmp[Ticket_Ticket::SON_OF]         = __('Son of');
-         $tmp[Ticket_Ticket::PARENT_OF]      = __('Parent of');
-      } else {
-         $tmp[Ticket_Ticket::LINK_TO]        = __('Linked to');
-         $tmp[Ticket_Ticket::DUPLICATE_WITH] = __('Duplicated by');
-         $tmp[Ticket_Ticket::SON_OF]         = __('Parent of');
-         $tmp[Ticket_Ticket::PARENT_OF]      = __('Son of');
-      }
-
-      if (isset($tmp[$value])) {
-         return $tmp[$value];
-      }
-      return NOT_AVAILABLE;
-   }
-
-   /**
     * Gets the ID of Formcreator request type
     */
    public static function getFormcreatorRequestTypeId() {
@@ -135,7 +106,7 @@ class PluginFormcreatorCommon {
     * @param CommonDBTM $item
     * @param array $condition
     * @param string $fieldName
-    * @return NULL|integer
+    * @return null|integer
     */
    public static function getMax(CommonDBTM $item, array $condition, $fieldName) {
       global $DB;
@@ -148,7 +119,7 @@ class PluginFormcreatorCommon {
          'LIMIT'  => 1
       ])->next();
 
-      if ($line === false) {
+      if (!isset($line[$fieldName])) {
          return null;
       }
       return (int) $line[$fieldName];

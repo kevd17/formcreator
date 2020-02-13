@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2019 Teclib'
+ * @copyright Copyright © 2011 - 2020 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -58,7 +58,7 @@ class PluginFormcreatorFloatField extends PluginFormcreatorField
       $additions .= '<td></td>';
       $additions .= '</tr>';
 
-      $common = $common = parent::getDesignSpecializationField();
+      $common = parent::getDesignSpecializationField();
       $additions .= $common['additions'];
 
       return [
@@ -70,23 +70,26 @@ class PluginFormcreatorFloatField extends PluginFormcreatorField
       ];
    }
 
-   public function displayField($canEdit = true) {
+   public function getRenderedHtml($canEdit = true) {
+      if (!$canEdit) {
+         return $this->value;
+      }
+
+      $html         = '';
       $id           = $this->question->getID();
       $rand         = mt_rand();
       $fieldName    = 'formcreator_field_' . $id;
       $domId        = $fieldName . '_' . $rand;
       $defaultValue = Html::cleanInputText($this->value);
-      if ($canEdit) {
-         echo '<input type="text" class="form-control"
-                  name="' . $fieldName . '"
-                  id="' . $domId . '"
-                  value="' . $defaultValue . '" />';
-         echo Html::scriptBlock("$(function() {
-            pluginFormcreatorInitializeField('$fieldName', '$rand');
-         });");
-      } else {
-         echo $this->value;
-      }
+      $html .= Html::input($fieldName, [
+         'id'    => $domId,
+         'value' => $defaultValue
+      ]);
+      $html .=Html::scriptBlock("$(function() {
+         pluginFormcreatorInitializeField('$fieldName', '$rand');
+      });");
+
+      return $html;
    }
 
    public function serializeValue() {
@@ -122,7 +125,7 @@ class PluginFormcreatorFloatField extends PluginFormcreatorField
    public function isValid() {
       if ($this->isRequired() && $this->value == '') {
          Session::addMessageAfterRedirect(
-            __('A required field is empty:', 'formcreator') . ' ' . $this->getLabel(),
+            sprintf(__('A required field is empty: %s', 'formcreator'), $this->getLabel()),
             false,
             ERROR);
          return false;
@@ -135,10 +138,10 @@ class PluginFormcreatorFloatField extends PluginFormcreatorField
       return true;
    }
 
-   private function isValidValue($value) {
+   public function isValidValue($value) {
       if (strlen($value) == 0) {
          return true;
-      } 
+      }
 
       if (!empty($value) && !is_numeric($value)) {
          Session::addMessageAfterRedirect(sprintf(__('This is not a number: %s', 'formcreator'), $this->question->fields['name']), false, ERROR);
@@ -212,12 +215,12 @@ class PluginFormcreatorFloatField extends PluginFormcreatorField
    public function parseAnswerValues($input, $nonDestructive = false) {
       $key = 'formcreator_field_' . $this->question->getID();
       if (!is_string($input[$key])) {
-         return false;
+         $this->value = '';
       }
-      $input[$key] != (float) str_replace(',', '.', $input[$key]);
+      // $input[$key] = (float) str_replace(',', '.', $input[$key]);
 
-       $this->value = $input[$key];
-       return true;
+      $this->value = $input[$key];
+      return true;
    }
 
    public static function canRequire() {
@@ -274,5 +277,15 @@ class PluginFormcreatorFloatField extends PluginFormcreatorField
       global $CFG_GLPI;
 
       return '<img src="' . $CFG_GLPI['root_doc'] . '/plugins/formcreator/pics/ui-float-field.png" title="" />';
+   }
+
+   public function isVisibleField()
+   {
+      return true;
+   }
+
+   public function isEditableField()
+   {
+      return true;
    }
 }
