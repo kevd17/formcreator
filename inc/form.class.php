@@ -1150,6 +1150,8 @@ PluginFormcreatorConditionnableInterface
       echo Html::css("plugins/formcreator/css/print_form.css", ['media' => 'print']);
 
       $style = "<style>";
+      print_r(PluginFormcreatorSection::COLUMNS);
+      exit;
       // force colums width
       $width_percent = 100 / PluginFormcreatorSection::COLUMNS;
       for ($i = 0; $i < PluginFormcreatorSection::COLUMNS; $i++) {
