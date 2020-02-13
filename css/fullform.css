@@ -60,7 +60,7 @@ input.submit {
 }
 
 .plugin_formcreator_form .mce-tinymce.mce-panel::before {
-    content: 'Description <span class="red">*</span>';
+    content: '';
 }
 
 .plugin_formcreator_form .form-title {
