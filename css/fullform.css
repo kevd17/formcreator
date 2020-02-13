@@ -54,7 +54,7 @@ input.submit {
     margin: 15px;
 }
 
-.plugin_formcreator_form .mce-panel::before {
+.plugin_formcreator_form .mce-tinymce.mce-panel::before {
     content: "Description";
 }
 
