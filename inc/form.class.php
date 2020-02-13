@@ -1150,8 +1150,6 @@ PluginFormcreatorConditionnableInterface
       echo Html::css("plugins/formcreator/css/print_form.css", ['media' => 'print']);
 
       $style = "<style>";
- //     print_r(PluginFormcreatorSection::COLUMNS);
-  //    exit;
       // force colums width
       $width_percent = 100 / PluginFormcreatorSection::COLUMNS;
       for ($i = 0; $i < PluginFormcreatorSection::COLUMNS; $i++) {
@@ -1166,7 +1164,7 @@ PluginFormcreatorConditionnableInterface
          ';
       }
       $style.= "</style>";
-//      echo $style;
+      echo $style;
 
       $formName = 'plugin_formcreator_form';
       $formId = $this->getID();
@@ -1230,7 +1228,7 @@ PluginFormcreatorConditionnableInterface
                   }
                }
             }
-            echo $question->getRenderedHtml(true, $_SESSION['formcreator']['data']);
+            //echo $question->getRenderedHtml(true, $_SESSION['formcreator']['data']);
             $lastQuestion = $question;
          }
          echo '</div>';
