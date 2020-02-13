@@ -140,6 +140,10 @@ if (isset($_POST['add'])) {
          Html::redirect('formdisplay.php?answer_saved');
       }
 
+      if (isset($_POST['fullform'])) {
+         Html::redirect('ticketcreated.php');
+      }
+      
       // redirect to created item
       if ($_SESSION['glpibackcreated']) {
          $item_ticket = new Item_Ticket;
