@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -50,12 +50,47 @@ class PluginFormcreatorTagField extends PluginFormcreatorDropdownField
       ];
    }
    
-   public function getRenderedHtml($canEdit = true) {
+   public function displayField($canEdit = true) {
       global $DB;
 
-      $html         = '';
-      if (!$canEdit) {
-         $html .= '<div class="form_field">';
+      $id           = $this->question->getID();
+      $rand         = mt_rand();
+      $fieldName    = 'formcreator_field_' . $id;
+      if ($canEdit) {
+         if (!class_exists(PluginTagTag::class)) {
+            // Plugin Tag not available
+            echo '';
+            return;
+         }
+         $result = $DB->request([
+            'SELECT' => ['id', 'name'],
+            'FROM'   => PluginTagTag::getTable(),
+            'WHERE'  => [
+               'OR' => [
+                  ['type_menu' => ['LIKE', '%\"Ticket\"%']],
+                  ['type_menu' => ['LIKE', '%\"Change\"%']],
+                  ['type_menu' => ['LIKE', '0']],
+               ]
+            ] + getEntitiesRestrictCriteria(PluginTagTag::getTable(), '', '', true),
+            'ORDER'  => 'name'
+         ]);
+         $values = [];
+         foreach ($result AS $id => $data) {
+            $values[$id] = $data['name'];
+         }
+
+         Dropdown::showFromArray($fieldName, $values, [
+            'values'              => $this->value,
+            'comments'            => false,
+            'rand'                => $rand,
+            'multiple'            => true,
+         ]);
+         echo PHP_EOL;
+         echo Html::scriptBlock("$(function() {
+            pluginFormcreatorInitializeTag('$fieldName', '$rand');
+         });");
+      } else {
+         echo '<div class="form_field">';
          $tagNames = [];
          if (count($this->value) > 0) {
             foreach ($this->value as $tagId) {
@@ -66,49 +101,9 @@ class PluginFormcreatorTagField extends PluginFormcreatorDropdownField
                $tagNames[] = $tag->fields['name'];
             }
          }
-         $html .= implode(', ', $tagNames);
-         $html .= '</div>';
-         return $html;
+         echo implode(', ', $tagNames);
+         echo '</div>';
       }
-
-      if (!class_exists(PluginTagTag::class)) {
-         // Plugin Tag not available
-         return '';
-      }
-
-      $id           = $this->question->getID();
-      $rand         = mt_rand();
-      $fieldName    = 'formcreator_field_' . $id;
-      $result = $DB->request([
-         'SELECT' => ['id', 'name'],
-         'FROM'   => PluginTagTag::getTable(),
-         'WHERE'  => [
-            'OR' => [
-               ['type_menu' => ['LIKE', '%\"Ticket\"%']],
-               ['type_menu' => ['LIKE', '%\"Change\"%']],
-               ['type_menu' => ['LIKE', '0']],
-            ]
-         ] + getEntitiesRestrictCriteria(PluginTagTag::getTable(), '', '', true),
-         'ORDER'  => 'name'
-      ]);
-      $values = [];
-      foreach ($result AS $id => $data) {
-         $values[$id] = $data['name'];
-      }
-
-      $html .=Dropdown::showFromArray($fieldName, $values, [
-         'values'              => $this->value,
-         'comments'            => false,
-         'rand'                => $rand,
-         'multiple'            => true,
-         'display'             => false,
-      ]);
-      $html .= PHP_EOL;
-      $html .= Html::scriptBlock("$(function() {
-         pluginFormcreatorInitializeTag('$fieldName', '$rand');
-      });");
-      
-      return $html;
    }
 
    public function serializeValue() {
@@ -228,15 +223,5 @@ class PluginFormcreatorTagField extends PluginFormcreatorDropdownField
       global $CFG_GLPI;
 
       return '<img src="' . $CFG_GLPI['root_doc'] . '/plugins/formcreator/pics/ui-tag-field.png" title="" />';
-   }
-
-   public function isVisibleField()
-   {
-      return true;
-   }
-
-   public function isEditableField()
-   {
-      return true;
    }
 }

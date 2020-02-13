@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -138,10 +138,6 @@ class PluginFormcreatorFields
          if ($item instanceof CommonDBChild) {
             if (is_subclass_of($item::$itemtype, PluginFormcreatorConditionnableInterface::class)) {
                if ($parent = $item->getItem(true, false)) {
-                  if ($parent->getType() == PluginFormcreatorForm::class) {
-                     // the condition for form is only for its submit button. A form is always visible
-                     return true;
-                  }
                   // Use visibility of the parent item
                   $evalItem[$itemtype][$itemId] = self::isVisible($parent, $fields);
                   return $evalItem[$itemtype][$itemId];
@@ -175,7 +171,7 @@ class PluginFormcreatorFields
       $evalItem[$itemtype][$itemId] = null;
 
       // Force the first logic operator to OR
-      $conditions[0]['logic']       = PluginFormcreatorCondition::SHOW_LOGIC_OR;
+      $conditions[0]['logic']       = 'OR';
 
       $return                       = false;
       $lowPrecedenceReturnPart      = false;
@@ -186,7 +182,7 @@ class PluginFormcreatorFields
             $nextLogic = $conditions[$order + 1]['logic'];
          } else {
             // To ensure the low precedence return part is used at the end of the whole evaluation
-            $nextLogic = PluginFormcreatorCondition::SHOW_LOGIC_OR;
+            $nextLogic = 'OR';
          }
 
          // TODO: find the best behavior if the question does not exists
@@ -334,8 +330,6 @@ class PluginFormcreatorFields
       foreach ($fields as $id => $field) {
          $fields[$id]->parseAnswerValues($input, true);
       }
-      // Get the visibility for the submit button of the form
-      $submitShow = PluginFormcreatorFields::isVisible($form, $fields);
 
       // Get the visibility result of questions
       $questionToShow = [];
@@ -347,13 +341,12 @@ class PluginFormcreatorFields
       $sectionToShow = [];
       $sections = (new PluginFormcreatorSection)->getSectionsFromForm($form->getID());
       foreach($sections as $section) {
-         $sectionToShow[$section->getID()] = PluginFormcreatorFields::isVisible($section, $fields);
+         $sectionToShow[$section->getID()] = PluginFormcreatorFields::isVisible($section, $fields);;
       }
 
       return [
          PluginFormcreatorQuestion::class => $questionToShow,
-         PluginFormcreatorSection::class  => $sectionToShow,
-         PluginFormcreatorForm::class     => $submitShow,
+         PluginFormcreatorSection::class => $sectionToShow,
       ];
    }
 
@@ -384,7 +377,7 @@ class PluginFormcreatorFields
     * @param string $type type of field to get
     * @param PluginFormcreatorQuestion $question question representing the field
     * @param array $data additional data
-    * @return null|PluginFormcreatorField
+    * @return null|PluginFormcreatorFieldInterface
     */
    public static function getFieldInstance($type, PluginFormcreatorQuestion $question) {
       if (!self::fieldTypeExists($type)) {

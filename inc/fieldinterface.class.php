@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -60,14 +60,6 @@ interface PluginFormcreatorFieldInterface
     * @return boolean True if the field has a valid value, false otherwise
     */
    public function isValid();
-
-   /**
-    * Check if a value is valid for the field type
-    *
-    * @param string $value
-    * @return boolean true if valid, false otherwise
-    */
-   public function isValidValue($value);
 
    /**
     * Is the field required?
@@ -144,7 +136,7 @@ interface PluginFormcreatorFieldInterface
 
    /**
     * Gets parameters of the field with their settings
-    * @return PluginFormcreatorQuestionParameter[]
+    * @return PluginFormcreatorQuestionParameterInterface[]
     */
    public function getParameters();
 
@@ -209,30 +201,4 @@ interface PluginFormcreatorFieldInterface
     * Gets HTML code for the icon of a field
     */
    public function getHtmlIcon();
-
-   /**
-    * get HTML code of rendered question for service catalog
-    * @param boolean $canEdit true if the user can edit the answer
-    * @return string HTML code
-    */
-   public function getRenderedHtml($canEdit);
-
-   /**
-    * Is the field editable ?
-    * Must return true if the field is editable by nature (i.e. a text box)
-    * or false if it is not editable by nature (i.e. a description field)
-    *
-    * @return boolean
-    */
-   public function isEditableField();
-
-   /**
-    * Is the field visible ?
-    * Must return trie if the field is visible by nature (i.e. a text botx, a description field)
-    * or false if it is invisible by nature (i.e. a hostname or ip field)
-    *
-    * @return boolean
-    */
-   public function isVisibleField();
-
 }

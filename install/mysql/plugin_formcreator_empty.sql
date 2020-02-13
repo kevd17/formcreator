@@ -53,7 +53,6 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_formcreator_forms` (
   `validation_required` tinyint(1) NOT NULL DEFAULT '0',
   `usage_count` int(11) NOT NULL DEFAULT '0',
   `is_default` tinyint(1) NOT NULL DEFAULT '0',
-  `show_rule` INT(11) NOT NULL DEFAULT '1' COMMENT 'Conditions setting to show the submit button',
   `uuid` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   INDEX `entities_id` (`entities_id`),
@@ -110,9 +109,7 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_formcreator_questions` (
   `default_values` text,
   `values` text,
   `description` text NOT NULL,
-  `row` int(11) NOT NULL DEFAULT '0',
-  `col` int(11) NOT NULL DEFAULT '0',
-  `width` int(11) NOT NULL DEFAULT '0',
+  `order` int(11) NOT NULL DEFAULT '0',
   `show_rule` int(11) NOT NULL DEFAULT '1',
   `uuid` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -171,7 +168,6 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_formcreator_targetchanges` (
   `tag_specifics` varchar(255) NOT NULL,
   `category_rule` int(11) NOT NULL DEFAULT '1',
   `category_question` int(11) NOT NULL DEFAULT '0',
-  `show_rule` int(11) NOT NULL DEFAULT '1',
   `uuid` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -193,8 +189,7 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_formcreator_targettickets` (
   `name` varchar(255) NOT NULL DEFAULT '',
   `plugin_formcreator_forms_id` int(11) NOT NULL DEFAULT '0',
   `target_name` varchar(255) NOT NULL DEFAULT '',
-  `type_rule` int(11) NOT NULL DEFAULT '1',
-  `type_question` int(11) NOT NULL DEFAULT '0',
+  `type` int(11) NOT NULL DEFAULT '1',
   `tickettemplates_id` int(11) DEFAULT NULL,
   `content` longtext,
   `due_date_rule` int(11) NOT NULL DEFAULT '1',
@@ -213,10 +208,9 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_formcreator_targettickets` (
   `category_question` int(11) NOT NULL DEFAULT '0',
   `associate_rule` int(11) NOT NULL DEFAULT '1',
   `associate_question` int(11) NOT NULL DEFAULT '0',
+  `uuid` varchar(255) DEFAULT NULL,
   `location_rule` INT(11) NOT NULL DEFAULT '1',
   `location_question` int(11) NOT NULL DEFAULT '0',
-  `show_rule` int(11) NOT NULL DEFAULT '1',
-  `uuid` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   INDEX `tickettemplates_id` (`tickettemplates_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

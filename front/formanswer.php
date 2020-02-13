@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -41,7 +41,7 @@ if (PluginFormcreatorFormAnswer::canView()) {
    if (plugin_formcreator_replaceHelpdesk()) {
       PluginFormcreatorWizard::header(__('Service catalog', 'formcreator'));
    } else {
-      if (Session::getCurrentInterface() == 'helpdesk') {
+      if ($_SESSION['glpiactiveprofile']['interface'] == 'helpdesk') {
          Html::helpHeader(
             __('Form Creator', 'formcreator'),
             $_SERVER['PHP_SELF']

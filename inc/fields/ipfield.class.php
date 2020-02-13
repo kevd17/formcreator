@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -36,7 +36,7 @@ class PluginFormcreatorIpField extends PluginFormcreatorField
    }
 
    public function getDesignSpecializationField() {
-      $common = parent::getDesignSpecializationField();
+      $common = $common = parent::getDesignSpecializationField();
       $additions = $common['additions'];
 
       return [
@@ -48,10 +48,6 @@ class PluginFormcreatorIpField extends PluginFormcreatorField
       ];
    }
 
-   public function prepareQuestionInputForSave($input) {
-      return $input;
-   }
-
    public function show($canEdit = true) {
       $id           = $this->question->getID();
       $rand         = mt_rand();
@@ -59,7 +55,7 @@ class PluginFormcreatorIpField extends PluginFormcreatorField
       $domId        = $fieldName . '_' . $rand;
       $ip = Toolbox::getRemoteIpAddress();
       $ip = Html::cleanInputText($ip);
-      return Html::hidden($fieldName, [
+      echo Html::hidden($fieldName, [
          'id'     => $domId,
          'value'  => $ip,
       ]);
@@ -96,10 +92,6 @@ class PluginFormcreatorIpField extends PluginFormcreatorField
    }
 
    public function isValid() {
-      return true;
-   }
-
-   public function isValidValue($value) {
       return true;
    }
 
@@ -143,15 +135,5 @@ class PluginFormcreatorIpField extends PluginFormcreatorField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-desktop" aria-hidden="true"></i>';
-   }
-
-   public function isVisibleField()
-   {
-      return false;
-   }
-
-   public function isEditableField()
-   {
-      return false;
    }
 }

@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -92,7 +92,7 @@ class PluginFormcreatorCategory extends CommonTreeDropdown
          'faq'      => '1',
          'contains' => ''
       ]);
-      if (version_compare(GLPI_VERSION, "9.5") >= 0) {
+      if (version_compare(GLPI_VERSION, "9.4") > 0) {
          // GLPI 9.5 returns an array
          $subQuery = new DBMysqlIterator($DB);
          $subQuery->buildQuery($query_faqs);
@@ -186,44 +186,5 @@ class PluginFormcreatorCategory extends CommonTreeDropdown
       }
 
       return $nodes;
-   }
-
-   public static function  getAvailableCategories($helpdeskHome = 1) {
-      global $DB;
-
-      // Define tables
-      $cat_table       = PluginFormcreatorCategory::getTable();
-      $categoryFk      = PluginFormcreatorCategory::getForeignKeyField();
-      $formTable       = PluginFormcreatorForm::getTable();
-      $formRestriction = PluginFormcreatorForm::getFormRestrictionCriterias($formTable);
-
-      $formRestriction["$formTable.helpdesk_home"] = $helpdeskHome;
-
-      $result = $DB->request([
-         'SELECT' => [
-            $cat_table => [
-               'name', 'id'
-            ]
-         ],
-         'FROM' => $cat_table,
-         'INNER JOIN' => [
-            $formTable => [
-               'FKEY' => [
-                  $cat_table => 'id',
-                  $formTable => $categoryFk
-               ]
-            ]
-         ],
-         'WHERE' => PluginFormcreatorForm::getFormRestrictionCriterias($formTable),
-         'GROUPBY' => [
-            "$cat_table.id"
-         ]
-      ]);
-
-      return $result;
-   }
-
-   public static function getAvailableCategoriesCriterias() {
-
    }
 }

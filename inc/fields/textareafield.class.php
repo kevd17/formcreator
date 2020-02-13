@@ -55,7 +55,7 @@ class PluginFormcreatorTextareaField extends PluginFormcreatorTextField
       $additions .= '</td>';
       $additions .= '</tr>';
 
-      $common = PluginFormcreatorField::getDesignSpecializationField();
+      $common = $common = PluginFormcreatorField::getDesignSpecializationField();
       $additions .= $common['additions'];
 
       return [
@@ -67,11 +67,7 @@ class PluginFormcreatorTextareaField extends PluginFormcreatorTextField
       ];
    }
 
-   public function getRenderedHtml($canEdit = true) {
-      if (!$canEdit) {
-         return Toolbox::getHtmlToDisplay($this->value);
-      }
-
+   public function displayField($canEdit = true) {
       $id           = $this->question->getID();
       $rand         = mt_rand();
       $fieldName    = 'formcreator_field_' . $id;
@@ -101,11 +97,6 @@ class PluginFormcreatorTextareaField extends PluginFormcreatorTextField
             echo nl2br($this->value);
          }
       }
-      $html .= Html::scriptBlock("$(function() {
-         pluginFormcreatorInitializeTextarea('$fieldName', '$rand');
-      });");
-
-      return $html;
    }
 
    public static function getName() {

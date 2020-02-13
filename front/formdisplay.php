@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -30,15 +30,16 @@
  */
 
 global $CFG_GLPI, $DB;
-include ('../../../inc/includes.php');
+include ("../../../inc/includes.php");
 
 // Check if plugin is activated...
 $plugin = new Plugin();
 
-if (!$plugin->isActivated('formcreator')) {
+if (!$plugin->isActivated("formcreator")) {
    Html::displayNotFoundError();
 }
 
+$form = new PluginFormcreatorForm();
 PluginFormcreatorForm::header();
 
 if (isset($_REQUEST['id'])
@@ -53,7 +54,6 @@ if (isset($_REQUEST['id'])
       'is_active' => '1',
       'is_deleted'=> '0',
    ];
-   $form = new PluginFormcreatorForm();
    if (!$form->getFromDBByCrit($criteria)) {
       Html::displayNotFoundError();
    }
@@ -82,7 +82,7 @@ if (isset($_REQUEST['id'])
    if (($form->fields['access_rights'] == PluginFormcreatorForm::ACCESS_PUBLIC) && (!isset($_SESSION['glpiID']))) {
       // If user is not authenticated, create temporary user
       if (!isset($_SESSION['glpiname'])) {
-         $_SESSION['formcreator_forms_id'] = $form->getID();
+         $_SESSION['formcreator_forms_id'] = $form->fields['id'];
          $_SESSION['glpiname'] = 'formcreator_temp_user';
          $_SESSION['valid_id'] = session_id();
          $_SESSION['glpiactiveentities'] = $form->fields['entities_id'];

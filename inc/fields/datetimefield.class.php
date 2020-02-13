@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -34,66 +34,27 @@ class PluginFormcreatorDatetimeField extends PluginFormcreatorField
    /** @var array $fields Fields of an instance of PluginFormcreatorQuestion */
    protected $fields = null;
 
-   const DATE_FORMAT = 'Y-m-d H:i:s';
-
    public function isPrerequisites() {
       return true;
    }
 
-   public function getDesignSpecializationField() {
-      $rand = mt_rand();
+   public function displayField($canEdit = true) {
+      if ($canEdit) {
+         $id        = $this->question->getID();
+         $rand      = mt_rand();
+         $fieldName = 'formcreator_field_' . $id;
 
-      $label = '';
-      $field = '';
+         Html::showDateTimeField($fieldName, [
+            'value' => strtotime($this->value) != '' ? $this->value : '',
+            'rand'  => $rand,
+         ]);
+         echo Html::scriptBlock("$(function() {
+            pluginFormcreatorInitializeDate('$fieldName', '$rand');
+         });");
 
-      $additions = '<tr class="plugin_formcreator_question_specific">';
-      $additions .= '<td>';
-      $additions .= '<label for="dropdown_default_values'.$rand.'">';
-      $additions .= __('Default values');
-      $additions .= '</label>';
-      $additions .= '</td>';
-      $additions .= '<td>';
-      $value = Html::entities_deep($this->question->fields['default_values']);
-      $additions .= Html::showDateTimeField('default_values', ['value' => $value, 'display' => false]);
-      $additions .= '</td>';
-      $additions .= '<td>';
-      $additions .= '</td>';
-      $additions .= '<td>';
-      $additions .= '</td>';
-      $additions .= '</tr>';
-
-      $common = parent::getDesignSpecializationField();
-      $additions .= $common['additions'];
-
-      return [
-         'label' => $label,
-         'field' => $field,
-         'additions' => $additions,
-         'may_be_empty' => false,
-         'may_be_required' => true,
-      ];
-   }
-
-   public function getRenderedHtml($canEdit = true) {
-      if (!$canEdit) {
-         return $this->value;
+      } else {
+         echo $this->value;
       }
-
-      $html = '';
-      $id        = $this->question->getID();
-      $rand      = mt_rand();
-      $fieldName = 'formcreator_field_' . $id;
-
-      $html .= Html::showDateTimeField($fieldName, [
-         'value'   => strtotime($this->value) != '' ? $this->value : '',
-         'rand'    => $rand,
-         'display' => false,
-      ]);
-      $html .= Html::scriptBlock("$(function() {
-         pluginFormcreatorInitializeDate('$fieldName', '$rand');
-      });");
-
-      return $html;
    }
 
    public function serializeValue() {
@@ -130,11 +91,6 @@ class PluginFormcreatorDatetimeField extends PluginFormcreatorField
       return true;
    }
 
-   public function isValidValue($value) {
-      $check = DateTime::createFromFormat(self::DATE_FORMAT, $value);
-      return $check !== false;
-   }
-
    public static function getName() {
       return __('Date & time', 'formcreator');
    }
@@ -149,8 +105,8 @@ class PluginFormcreatorDatetimeField extends PluginFormcreatorField
       } else {
          $answer = $this->value;
       }
-      $answerDatetime = DateTime::createFromFormat(self::DATE_FORMAT, $answer);
-      $compareDatetime = DateTime::createFromFormat(self::DATE_FORMAT, $value);
+      $answerDatetime = DateTime::createFromFormat("Y-m-d H:i:s", $answer);
+      $compareDatetime = DateTime::createFromFormat("Y-m-d H:i:s", $value);
       return $answerDatetime == $compareDatetime;
    }
 
@@ -164,8 +120,8 @@ class PluginFormcreatorDatetimeField extends PluginFormcreatorField
       } else {
          $answer = $this->value;
       }
-      $answerDatetime = DateTime::createFromFormat(self::DATE_FORMAT, $answer);
-      $compareDatetime = DateTime::createFromFormat(self::DATE_FORMAT, $value);
+      $answerDatetime = DateTime::createFromFormat("Y-m-d H:i:s", $answer);
+      $compareDatetime = DateTime::createFromFormat("Y-m-d H:i:s", $value);
       return $answerDatetime > $compareDatetime;
    }
 
@@ -175,15 +131,12 @@ class PluginFormcreatorDatetimeField extends PluginFormcreatorField
 
    public function parseAnswerValues($input, $nonDestructive = false) {
       $key = 'formcreator_field_' . $this->question->getID();
-      if (!isset($input[$key])) {
-         $input[$key] = '';
-      }
       if (!is_string($input[$key])) {
          return false;
       }
 
       if ($input[$key] != ''
-         && DateTime::createFromFormat(self::DATE_FORMAT, $input[$key]) === false) {
+         && DateTime::createFromFormat("Y-m-d H:i:s", $input[$key]) === false) {
          return false;
       }
 
@@ -197,15 +150,5 @@ class PluginFormcreatorDatetimeField extends PluginFormcreatorField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-calendar" aria-hidden="true"></i>';
-   }
-
-   public function isVisibleField()
-   {
-      return true;
-   }
-
-   public function isEditableField()
-   {
-      return true;
    }
 }

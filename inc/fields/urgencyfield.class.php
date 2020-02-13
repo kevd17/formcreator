@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -62,7 +62,7 @@ class PluginFormcreatorUrgencyField extends PluginFormcreatorField
       $additions .= '</td>';
       $additions .= '</tr>';
 
-      $common = PluginFormcreatorField::getDesignSpecializationField();
+      $common = $common = PluginFormcreatorField::getDesignSpecializationField();
       $additions .= $common['additions'];
 
       return [
@@ -74,28 +74,23 @@ class PluginFormcreatorUrgencyField extends PluginFormcreatorField
       ];
    }
 
-   public function getRenderedHtml($canEdit = true) {
-      if (!$canEdit) {
-         return Ticket::getPriorityName($this->value);
+   public function displayField($canEdit = true) {
+      if ($canEdit) {
+         $id           = $this->question->getID();
+         $rand         = mt_rand();
+         $fieldName    = 'formcreator_field_' . $id;
+         Ticket::dropdownUrgency(['name'     => $fieldName,
+                                  'value'    => $this->value,
+                                  'comments' => false,
+                                  'rand'     => $rand
+         ]);
+         echo PHP_EOL;
+         echo Html::scriptBlock("$(function() {
+            pluginFormcreatorInitializeUrgency('$fieldName', '$rand');
+         });");
+      } else {
+         echo Ticket::getPriorityName($this->value);
       }
-
-      $html         = '';
-      $id           = $this->question->getID();
-      $rand         = mt_rand();
-      $fieldName    = 'formcreator_field_' . $id;
-      $html .= Ticket::dropdownUrgency([
-         'name'     => $fieldName,
-         'value'    => $this->value,
-         'comments' => false,
-         'rand'     => $rand,
-         'display'  => false,
-      ]);
-      $html .= PHP_EOL;
-      $html .= Html::scriptBlock("$(function() {
-         pluginFormcreatorInitializeUrgency('$fieldName', '$rand');
-      });");
-
-      return $html;
    }
 
    public static function getName() {
@@ -182,10 +177,6 @@ class PluginFormcreatorUrgencyField extends PluginFormcreatorField
       return true;
    }
 
-   public function isValidValue($value) {
-      return in_array($value, array_keys($this->getAvailableValues()));
-   }
-
    public function equals($value) {
       $available = $this->getAvailableValues();
       return strcasecmp($available[$this->value], $value) === 0;
@@ -210,15 +201,5 @@ class PluginFormcreatorUrgencyField extends PluginFormcreatorField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-exclamation" aria-hidden="true"></i>';
-   }
-
-   public function isVisibleField()
-   {
-      return true;
-   }
-
-   public function isEditableField()
-   {
-      return true;
    }
 }

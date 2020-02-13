@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -37,27 +37,25 @@ class PluginFormcreatorFileField extends PluginFormcreatorField
       return true;
    }
 
-   public function getRenderedHtml($canEdit = true) {
-      if (!$canEdit) {
-         $html = '';
+   public function displayField($canEdit = true) {
+      if ($canEdit) {
+         echo Html::file([
+            'name'    => 'formcreator_field_' . $this->question->getID(),
+            'display' => false,
+            'multiple' => 'multiple',
+         ]);
+      } else {
          $doc = new Document();
-         $answer = $this->uploadData;
-         if (!is_array($this->uploadData)) {
-            $answer = [$this->uploadData];
+         $answer = $this->value;
+         if (!is_array($this->value)) {
+            $answer = [$this->value];
          }
          foreach ($answer as $item) {
             if (is_numeric($item) && $doc->getFromDB($item)) {
-               $html .= $doc->getDownloadLink();
+               echo $doc->getDownloadLink();
             }
          }
-         return $html;
       }
-
-      return Html::file([
-         'name'    => 'formcreator_field_' . $this->question->getID(),
-         'display' => false,
-         'multiple' => 'multiple',
-      ]);
    }
 
    public function serializeValue() {
@@ -100,17 +98,13 @@ class PluginFormcreatorFileField extends PluginFormcreatorField
       return true;
    }
 
-   public function isValidValue($value) {
+   private function isValidValue($value) {
       // If the field is required it can't be empty
-      return (!$this->isRequired() || count($this->uploadData) > 0);
+      return (count($this->uploadData) > 0);
    }
 
    public static function getName() {
       return __('File');
-   }
-
-   public function prepareQuestionInputForSave($input) {
-      return $input;
    }
 
    public static function canRequire() {
@@ -224,15 +218,5 @@ class PluginFormcreatorFileField extends PluginFormcreatorField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-file" aria-hidden="true"></i>';
-   }
-
-   public function isVisibleField()
-   {
-      return true;
-   }
-
-   public function isEditableField()
-   {
-      return true;
    }
 }

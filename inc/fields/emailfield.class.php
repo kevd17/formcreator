@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -29,74 +29,79 @@
  * ---------------------------------------------------------------------
  */
 
-class PluginFormcreatorEmailField extends PluginFormcreatorTextField
+class PluginFormcreatorEmailField extends PluginFormcreatorField
 {
-   public function getDesignSpecializationField() {
-      $rand = mt_rand();
-
-      $label = '';
-      $field = '';
-
-      $additions = '<tr class="plugin_formcreator_question_specific">';
-      $additions .= '<td>';
-      $additions .= '<label for="dropdown_default_values'.$rand.'">';
-      $additions .= __('Default value');
-      $additions .= '</label>';
-      $additions .= '</td>';
-      $additions .= '<td id="dropdown_default_value_field">';
-      $value = Html::entities_deep($this->question->fields['default_values']);
-      $additions .= Html::input('default_values', [
-         'type'  => 'email',
-         'id'    => 'default_values',
-         'value' => $value,
-      ]);
-      $additions .= '</td>';
-      $additions .= '<td></td>';
-      $additions .= '<td></td>';
-      $additions .= '</tr>';
-
-      return [
-         'label' => $label,
-         'field' => $field,
-         'additions' => $additions,
-         'may_be_empty' => false,
-         'may_be_required' => true,
-      ];
+   public function isPrerequisites() {
+      return true;
    }
 
-   public function getRenderedHtml($canEdit = true) {
-      if (!$canEdit) {
-         return $this->value;
+   public function displayField($canEdit = true) {
+      if ($canEdit) {
+         $id           = $this->question->getID();
+         $rand         = mt_rand();
+         $fieldName    = 'formcreator_field_' . $id;
+         $domId        = $fieldName . '_' . $rand;
+         $defaultValue = Html::cleanInputText($this->value);
+
+         echo Html::input($fieldName, [
+            'id'    => $domId,
+            'value' => $defaultValue,
+         ]);
+         echo Html::scriptBlock("$(function() {
+            pluginFormcreatorInitializeEmail('$fieldName', '$rand');
+         });");
+      } else {
+         echo $this->value;
       }
-      $html = '';
-      $id           = $this->question->getID();
-      $rand         = mt_rand();
-      $fieldName    = 'formcreator_field_' . $id;
-      $domId        = $fieldName . '_' . $rand;
-      $defaultValue = Html::cleanInputText($this->value);
-
-      $html .= Html::input($fieldName, [
-         //'type'  => 'email',
-         'id'    => $domId,
-         'value' => $defaultValue,
-      ]);
-      $html .= Html::scriptBlock("$(function() {
-         pluginFormcreatorInitializeEmail('$fieldName', '$rand');
-      });");
-
-      return $html;
    }
 
-   public function isValidValue($value) {
-      if ($value === '') {
-         return true;
+   public function serializeValue() {
+      if ($this->value === null || $this->value === '') {
+         return '';
       }
 
-      if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
-         Session::addMessageAfterRedirect(__('This is not a valid e-mail:', 'formcreator') . ' ' . $this->getLabel(), false, ERROR);
-         return false;
+      return $this->value;
+   }
+
+   public function deserializeValue($value) {
+      $this->value = ($value !== null && $value !== '')
+                  ? $value
+                  : '';
+   }
+
+   public function getValueForDesign() {
+      if ($this->value === null) {
+         return '';
       }
 
+      return $this->value;
+   }
+
+   public function getValueForTargetText($richText) {
+      return Toolbox::addslashes_deep($this->value);
+   }
+
+   public function getDocumentsForTarget() {
+      return [];
+   }
+
+   public function isValid() {
+      if ($this->value == '') {
+         if ($this->isRequired()) {
+            Session::addMessageAfterRedirect(
+               __('A required field is empty:', 'formcreator') . ' ' . $this->getLabel(),
+               false,
+               ERROR);
+            return false;
+         }
+      } else {
+         if (!filter_var($this->value, FILTER_VALIDATE_EMAIL)) {
+            Session::addMessageAfterRedirect(__('This is not a valid e-mail:', 'formcreator') . ' ' . $this->getLabel(), false, ERROR);
+            return false;
+         }
+      }
+
+      // All is OK
       return true;
    }
 
@@ -116,23 +121,18 @@ class PluginFormcreatorEmailField extends PluginFormcreatorTextField
 
    public function parseAnswerValues($input, $nonDestructive = false) {
       $key = 'formcreator_field_' . $this->question->getID();
-      if (!isset($input[$key])) {
-         return false;
-      }
-      if (!isset($input[$key])) {
-         $input[$key] = '';
-      }
-
       if (!is_string($input[$key])) {
          return false;
       }
+      if ($input[$key] === '') {
+         return true;
+      }
+      if (!filter_var($input[$key], FILTER_VALIDATE_EMAIL)) {
+         return false;
+      }
 
-      $this->value = $input[$key];
-      return true;
-   }
-
-   public function getEmptyParameters() {
-      return [];
+       $this->value = $input[$key];
+       return true;
    }
 
    public function equals($value) {
@@ -157,15 +157,5 @@ class PluginFormcreatorEmailField extends PluginFormcreatorTextField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-envelope" aria-hidden="true"></i>';
-   }
-
-   public function isVisibleField()
-   {
-      return true;
-   }
-
-   public function isEditableField()
-   {
-      return true;
    }
 }

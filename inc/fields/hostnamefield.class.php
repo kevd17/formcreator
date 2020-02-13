@@ -17,25 +17,21 @@ class PluginFormcreatorHostnameField extends PluginFormcreatorField
       ];
    }
 
-   public function prepareQuestionInputForSave($input) {
-      return $input;
-   }
-
    public function show($canEdit = true) {
-      if (!$canEdit) {
-         return parent::show($canEdit);
-      }
-
       $id           = $this->question->getID();
       $rand         = mt_rand();
       $fieldName    = 'formcreator_field_' . $id;
       $domId        = $fieldName . '_' . $rand;
-      $hostname = gethostbyaddr(Toolbox::getRemoteIpAddress());
-      $hostname = Html::cleanInputText($hostname);
-      return Html::hidden($fieldName, [
-         'id'    => $domId,
-         'value' => $hostname
-      ]);
+      if ($canEdit) {
+         $hostname = gethostbyaddr(Toolbox::getRemoteIpAddress());
+         $hostname = Html::cleanInputText($hostname);
+         echo '<input type="hidden" class="form-control"
+            name="' . $fieldName . '"
+            id="' . $domId . '"
+            value="' . $hostname . '" />' . PHP_EOL;
+      } else {
+         parent::show($canEdit);
+      }
    }
 
    public function serializeValue() {
@@ -59,10 +55,6 @@ class PluginFormcreatorHostnameField extends PluginFormcreatorField
    }
 
    public function isValid() {
-      return true;
-   }
-
-   public function isValidValue($value) {
       return true;
    }
 
@@ -106,15 +98,5 @@ class PluginFormcreatorHostnameField extends PluginFormcreatorField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-desktop" aria-hidden="true"></i>';
-   }
-
-   public function isVisibleField()
-   {
-      return false;
-   }
-
-   public function isEditableField()
-   {
-      return false;
    }
 }

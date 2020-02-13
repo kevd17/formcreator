@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -31,6 +31,10 @@
 
 class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
 {
+   public function isPrerequisites() {
+      return true;
+   }
+
    public function getDesignSpecializationField() {
       $rand = mt_rand();
 
@@ -70,10 +74,6 @@ class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
             Entity::class           => Entity::getTypeName(2),
             Profile::class          => Profile::getTypeName(2)],
       ];
-      $plugin = new Plugin();
-      if ($plugin->isActivated('appliances')) {
-         $optgroup[__("Assets")][PluginAppliancesAppliance::class] = PluginAppliancesAppliance::getTypeName(2);
-      }
       array_unshift($optgroup, '---');
       $field = Dropdown::showFromArray('glpi_objects', $optgroup, [
          'value'     => $this->question->fields['values'],
@@ -108,18 +108,17 @@ class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
    }
 
    public function prepareQuestionInputForSave($input) {
-      if (!isset($input['glpi_objects']) || empty($input['glpi_objects'])) {
-         Session::addMessageAfterRedirect(
-               __('The field value is required:', 'formcreator') . ' ' . $input['name'],
-               false,
-               ERROR);
-         return [];
+      if (isset($input['glpi_objects'])) {
+         if (empty($input['glpi_objects'])) {
+            Session::addMessageAfterRedirect(
+                  __('The field value is required:', 'formcreator') . ' ' . $input['name'],
+                  false,
+                  ERROR);
+            return [];
+         }
+         $input['values']         = $input['glpi_objects'];
+         $this->value = isset($input['dropdown_default_value']) ? $input['dropdown_default_value'] : '';
       }
-
-      $input['values']         = $input['glpi_objects'];
-      $input['default_values'] = isset($input['dropdown_default_value']) ? $input['dropdown_default_value'] : '';
-      unset($input['dropdown_default_value']);
-
       return $input;
    }
 
@@ -136,10 +135,6 @@ class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
       }
 
       // All is OK
-      return true;
-   }
-
-   public function isValidValue($value) {
       return true;
    }
 

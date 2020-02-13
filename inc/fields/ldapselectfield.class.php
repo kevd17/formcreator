@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -92,7 +92,7 @@ class PluginFormcreatorLdapselectField extends PluginFormcreatorSelectField
       $additions .= '<td colspan="2">&nbsp;</td>';
       $additions .= '</tr>';
 
-      $common = parent::getDesignSpecializationField();
+      $common = $common = parent::getDesignSpecializationField();
       $additions .= $common['additions'];
 
       return [
@@ -191,10 +191,6 @@ class PluginFormcreatorLdapselectField extends PluginFormcreatorSelectField
       return true;
    }
 
-   public function isValidValue($value) {
-      return true;
-   }
-
    public function prepareQuestionInputForSave($input) {
       // Fields are differents for dropdown lists, so we need to replace these values into the good ones
       if (!isset($input['ldap_auth'])) {
@@ -279,15 +275,5 @@ class PluginFormcreatorLdapselectField extends PluginFormcreatorSelectField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-sitemap" aria-hidden="true"></i>';
-   }
-
-   public function isVisibleField()
-   {
-      return true;
-   }
-
-   public function isEditableField()
-   {
-      return true;
    }
 }

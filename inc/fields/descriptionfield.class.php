@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -36,7 +36,7 @@ class PluginFormcreatorDescriptionField extends PluginFormcreatorField
    }
 
    public function getDesignSpecializationField() {
-      $common = parent::getDesignSpecializationField();
+      $common = $common = parent::getDesignSpecializationField();
       $additions = $common['additions'];
 
       return [
@@ -48,8 +48,10 @@ class PluginFormcreatorDescriptionField extends PluginFormcreatorField
       ];
    }
 
-   public function getRenderedHtml($canEdit = true) {
-      return nl2br(html_entity_decode($this->question->fields['description']));
+   public function show($canEdit = true) {
+      echo '<div class="description_field form-group" id="form-group-field-' . $this->question->getID() . '">';
+      echo nl2br(html_entity_decode($this->question->fields['description']));
+      echo '</div>' . PHP_EOL;
    }
 
    public function serializeValue() {
@@ -73,10 +75,6 @@ class PluginFormcreatorDescriptionField extends PluginFormcreatorField
    }
 
    public function isValid() {
-      return true;
-   }
-
-   public function isValidValue($value) {
       return true;
    }
 
@@ -131,15 +129,5 @@ class PluginFormcreatorDescriptionField extends PluginFormcreatorField
       global $CFG_GLPI;
 
       return '<img src="' . $CFG_GLPI['root_doc'] . '/plugins/formcreator/pics/ui-description-field.png" title="" />';
-   }
-
-   public function isVisibleField()
-   {
-      return true;
-   }
-
-   public function isEditableField()
-   {
-      return false;
    }
 }

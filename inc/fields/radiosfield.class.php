@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Formcreator. If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
- * @copyright Copyright © 2011 - 2020 Teclib'
+ * @copyright Copyright © 2011 - 2019 Teclib'
  * @license   http://www.gnu.org/licenses/gpl.txt GPLv3+
  * @link      https://github.com/pluginsGLPI/formcreator/
  * @link      https://pluginsglpi.github.io/formcreator/
@@ -49,10 +49,10 @@ class PluginFormcreatorRadiosField extends PluginFormcreatorField
       $additions .= '</label>';
       $additions .= '</td>';
       $additions .= '<td>';
-      $additions .= Html::input(
-         'default_values', [
+      $additions .= Html::textarea([
+         'name'             => 'default_values',
          'id'               => 'default_values',
-         'value'            => Html::entities_deep($this->getValueForDesign()),
+         'value'            => $this->question->fields['default_values'],
          'cols'             => '50',
          'display'          => false,
       ]);
@@ -64,14 +64,10 @@ class PluginFormcreatorRadiosField extends PluginFormcreatorField
       $additions .= '</label>';
       $additions .= '</td>';
       $additions .= '<td>';
-      $value = json_decode($this->question->fields['values']);
-      if ($value === null) {
-         $value = [];
-      }
       $additions .= Html::textarea([
          'name'             => 'values',
          'id'               => 'values',
-         'value'            => implode("\r\n", $value),
+         'value'            => $this->question->fields['values'],
          'cols'             => '50',
          'display'          => false,
       ]);
@@ -90,44 +86,43 @@ class PluginFormcreatorRadiosField extends PluginFormcreatorField
       ];
    }
 
-   public function getRenderedHtml($canEdit = true) {
-      if (!$canEdit) {
-         return $this->value;
-      }
-      $html         = '';
-      $id           = $this->question->getID();
-      $rand         = mt_rand();
-      $fieldName    = 'formcreator_field_' . $id;
-      $domId        = $fieldName . '_' . $rand;
+   public function displayField($canEdit = true) {
+      if ($canEdit) {
+         $id           = $this->question->getID();
+         $rand         = mt_rand();
+         $fieldName    = 'formcreator_field_' . $id;
+         $domId        = $fieldName . '_' . $rand;
+         // echo '<input type="hidden" class="form-control"
+         //    name="' . $fieldName . '"
+         //    id="' . $domId . '"
+         //    value="" />' . PHP_EOL;
 
-      $values = $this->getAvailableValues();
-      if (!empty($values)) {
-         $html .= '<div class="formcreator_radios">';
-         $i = 0;
-         foreach ($values as $value) {
-            if ((trim($value) != '')) {
-               $i++;
-               $checked = ($this->value == $value) ? ['checked' => ''] : [];
-               $html .= '<p>';
-               $html .= Html::input($fieldName, [
-                  'type'    => 'radio',
-                  'class'   => 'form-control',
-                  'id'      => $domId . '_' . $i,
-                  'value'   => $value
-               ] + $checked);
-               $html .= '<label for="' . $domId . '_' . $i . '">';
-               $html .= $value;
-               $html .= '</label>';
-               $html .= '</p>';
+         $values = $this->getAvailableValues();
+         if (!empty($values)) {
+            echo '<div class="formcreator_radios">';
+            $i = 0;
+            foreach ($values as $value) {
+               if ((trim($value) != '')) {
+                  $i++;
+                  $checked = ($this->value == $value) ? ' checked' : '';
+                  echo '<input type="radio" class="form-control"
+                        name="' . $fieldName . '"
+                        id="' . $domId . '_' . $i . '"
+                        value="' . $value . '"' . $checked . ' /> ';
+                  echo '<label for="' . $domId . '_' . $i . '">';
+                  echo $value;
+                  echo '</label>';
+               }
             }
+            echo '</div>';
          }
-         $html .= '</div>';
-      }
-      $html .= Html::scriptBlock("$(function() {
-         pluginFormcreatorInitializeRadios('$fieldName', '$rand');
-      });");
+         echo Html::scriptBlock("$(function() {
+            pluginFormcreatorInitializeRadios('$fieldName', '$rand');
+         });");
 
-      return $html;
+      } else {
+         echo $this->value;
+      }
    }
 
    public static function getName() {
@@ -135,18 +130,27 @@ class PluginFormcreatorRadiosField extends PluginFormcreatorField
    }
 
    public function prepareQuestionInputForSave($input) {
-      if (!isset($input['values']) || empty($input['values'])) {
-         Session::addMessageAfterRedirect(
-            __('The field value is required:', 'formcreator') . ' ' . $input['name'],
-            false,
-            ERROR);
-         return [];
+      if (isset($input['values'])) {
+         if (empty($input['values'])) {
+            Session::addMessageAfterRedirect(
+                  __('The field value is required:', 'formcreator') . ' ' . $input['name'],
+                  false,
+                  ERROR);
+            return [];
+         }
+         // trim values
+         $input['values'] = $this->trimValue($input['values']);
       }
-
-      // trim values
-      $input['values'] = $this->trimValue($input['values']);
-      $input['default_values'] = trim($input['default_values']);
-
+      if (isset($input['default_values'])) {
+         // trim values
+         $this->value = explode('\r\n', $input['default_values']);
+         $this->value = array_map('trim', $this->value);
+         $this->value = array_filter($this->value, function($value) {
+            return ($value !== '');
+         });
+         $this->value = array_shift($this->value);
+         $input['default_values'] = $this->value;
+      }
       return $input;
    }
 
@@ -161,7 +165,11 @@ class PluginFormcreatorRadiosField extends PluginFormcreatorField
          return true;
       }
 
-      $this->value = Toolbox::stripslashes_deep($input[$key]);
+       $this->value = Toolbox::stripslashes_deep($input[$key]);
+       return true;
+   }
+
+   public static function canRequire() {
       return true;
    }
 
@@ -217,16 +225,6 @@ class PluginFormcreatorRadiosField extends PluginFormcreatorField
       return true;
    }
 
-   public function isValidValue($value) {
-      $value = Toolbox::stripslashes_deep($value);
-      $value = trim($value);
-      return in_array($value, $this->getAvailableValues());
-   }
-
-   public static function canRequire() {
-      return true;
-   }
-
    public function equals($value) {
       return $this->value == $value;
    }
@@ -249,15 +247,5 @@ class PluginFormcreatorRadiosField extends PluginFormcreatorField
 
    public function getHtmlIcon() {
       return '<i class="fa fa-check-circle" aria-hidden="true"></i>';
-   }
-
-   public function isVisibleField()
-   {
-      return true;
-   }
-
-   public function isEditableField()
-   {
-      return true;
    }
 }
