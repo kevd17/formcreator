@@ -244,7 +244,7 @@ PluginFormcreatorConditionnableInterface
          . ' data-id="' . $this->getID() . '"'
          . ' >';
       $html .= '<div class="grid-stack-item-content form-group ' . $required . '" id="form-group-field-' . $this->getID() . '">';
-      $html .= $field->show($canEdit);
+      //$html .= $field->show($canEdit);
       $html .= '</div>';
       $html .= '</div>';
 
