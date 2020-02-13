@@ -1235,7 +1235,7 @@ PluginFormcreatorConditionnableInterface
 
          echo '</li>';
       }
-exit;
+
       // Delete saved answers if any
       unset($_SESSION['formcreator']['data']);
 
