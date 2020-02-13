@@ -45,6 +45,10 @@ PluginFormcreatorForm::header();
 if (isset($_REQUEST['id'])
    && is_numeric($_REQUEST['id'])) {
 
+   if (isset($_GET['fullform']) && $_GET['fullform'] == "true") {
+      echo Html::css('plugins/formcreator/css/fullform.css');
+   }
+
    $criteria = [
       'id'        => (int) $_REQUEST['id'],
       'is_active' => '1',
@@ -90,7 +94,9 @@ if (isset($_REQUEST['id'])
    }
 
    $form->displayUserForm();
-
+   if (isset($_GET['fullform']) && $_GET['fullform'] == "true") {
+      echo Html::hidden('fullform', ['value' => "true"]);
+   }
    // If user was not authenticated, remove temporary user
    if ($_SESSION['glpiname'] == 'formcreator_temp_user') {
       session_write_close();
