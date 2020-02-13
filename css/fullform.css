@@ -12,7 +12,7 @@ body {
     font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
 }
 
-.plugin_formcreator_form .form-control {
+.plugin_formcreator_form .form_field > input {
     border-radius: 0 !important;
 }
 
@@ -43,10 +43,19 @@ input.submit {
 }
 
 .plugin_formcreator_form .form-group > label {
-    font-weight: 400;
+    font-weight: 400 !important;
     color: #555;
     text-rendering: optimizeLegibility!important;
     -webkit-font-smoothing: antialiased!important;
+}
+
+.plugin_formcreator_form .mce-panel {
+    width: inherit;
+    margin: 15px;
+}
+
+.plugin_formcreator_form .mce-panel::before {
+    content: "Description";
 }
 
 .plugin_formcreator_form .form-title {
