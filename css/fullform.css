@@ -52,6 +52,11 @@ input.submit {
 .plugin_formcreator_form .mce-panel {
     width: inherit;
     margin: 15px;
+    background: none;
+}
+
+.plugin_formcreator_form .mce-container-body {
+    background-color: #fff;
 }
 
 .plugin_formcreator_form .mce-tinymce.mce-panel::before {
