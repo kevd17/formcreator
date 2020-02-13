@@ -216,7 +216,7 @@ PluginFormcreatorConditionnableInterface
       if ($this->isNewItem()) {
          return '';
       }
-
+      
       $html = '';
 
       $field = PluginFormcreatorFields::getFieldInstance(
@@ -226,6 +226,8 @@ PluginFormcreatorConditionnableInterface
       if (!$field->isPrerequisites()) {
          return '';
       }
+      var_dump($field->show($canEdit));
+      exit;
 
       $key = 'formcreator_field_' . $this->getID();
       if (isset($value[$key])) {
@@ -244,7 +246,7 @@ PluginFormcreatorConditionnableInterface
          . ' data-id="' . $this->getID() . '"'
          . ' >';
       $html .= '<div class="grid-stack-item-content form-group ' . $required . '" id="form-group-field-' . $this->getID() . '">';
-      //$html .= $field->show($canEdit);
+      $html .= $field->show($canEdit);
       $html .= '</div>';
       $html .= '</div>';
 
