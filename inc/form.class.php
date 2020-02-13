@@ -1145,6 +1145,7 @@ PluginFormcreatorConditionnableInterface
          unset($_SESSION['formcreator']['data']);
       } else {
          $data = null;
+      }
       // Print css media
       echo Html::css("plugins/formcreator/css/print_form.css", ['media' => 'print']);
 
