@@ -99,3 +99,7 @@ input.submit {
     pointer-events: none;
     cursor: default;
 }
+
+.plugin_formcreator_container .formcreator-nav-button {
+    display: none;
+}
