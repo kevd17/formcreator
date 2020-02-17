@@ -103,3 +103,7 @@ input.submit {
 .plugin_formcreator_container .formcreator-nav-button {
     display: none !important;
 }
+
+#page.plugin_formcreator_page {
+    height: inherit !important;
+}
