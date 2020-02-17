@@ -71,6 +71,7 @@ class PluginFormcreatorTextareaField extends PluginFormcreatorTextField
       if (!$canEdit) {
          return Toolbox::getHtmlToDisplay($this->value);
       }
+      $html = '';
 
       $id           = $this->question->getID();
       $rand         = mt_rand();
@@ -82,7 +83,7 @@ class PluginFormcreatorTextareaField extends PluginFormcreatorTextField
          } else {
             $value = $this->value;
          }
-         echo Html::textarea([
+         $html .= Html::textarea([
             'name'            => $fieldName,
             'rand'            => $rand,
             'value'           => $value,
@@ -91,19 +92,16 @@ class PluginFormcreatorTextareaField extends PluginFormcreatorTextField
             'enable_richtext' => $useRichText,
             'enable_fileupload'=> true,
          ]);
-         echo Html::scriptBlock("$(function() {
+         $html .= Html::scriptBlock("$(function() {
             pluginFormcreatorInitializeTextarea('$fieldName', '$rand');
          });");
       } else {
          if ($useRichText) {
-            echo Toolbox::getHtmlToDisplay($this->value);
+            $html .= Toolbox::getHtmlToDisplay($this->value);
          } else {
-            echo nl2br($this->value);
+            $html .= nl2br($this->value);
          }
       }
-      $html .= Html::scriptBlock("$(function() {
-         pluginFormcreatorInitializeTextarea('$fieldName', '$rand');
-      });");
 
       return $html;
    }
