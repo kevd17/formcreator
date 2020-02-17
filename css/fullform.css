@@ -101,5 +101,5 @@ input.submit {
 }
 
 .plugin_formcreator_container .formcreator-nav-button {
-    display: none;
+    display: none !important;
 }
