@@ -1122,6 +1122,7 @@ a.plugin_formcreator_formTile_title {
    float: left;
    height: 100%;
    position: relative;
+   padding-top: inherit;
 }
 
 #plugin_formcreator_serviceCatalog #header_top {
@@ -1130,6 +1131,10 @@ a.plugin_formcreator_formTile_title {
    position: relative;
    z-index: 10;
 }
+#plugin_formcreator_serviceCatalog #header_top #c_logo {
+   margin-left: inherit;
+}
+
 .formcreator_header_top#header_top {
    margin-left:  300px;
    width: calc(100vw - 300px);
