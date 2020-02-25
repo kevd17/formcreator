@@ -50,7 +50,7 @@ class PluginFormcreatorWizard {
    **/
    static private function liberBarre($user_id) {
       $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, "http://utilisateurs1.agglo-royan.fr:8080/utilisateurs/utilisateurs/GenerateurBandeauNavigationServlet?identifiant=".$user_id);
+      curl_setopt($ch, CURLOPT_URL, "http://ldap1.agglo-royan.fr:8080/utilisateurs/utilisateurs/GenerateurBandeauNavigationServlet?identifiant=".$user_id);
       curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
       $output = curl_exec($ch);
