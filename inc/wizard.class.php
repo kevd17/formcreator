@@ -42,6 +42,22 @@ class PluginFormcreatorWizard {
    const MENU_BOOKMARKS    = 5;
    const MENU_HELP         = 6;
 
+   /**
+    * Affiche le contenu de la LiberBarre selon les droits de l'utilisateur
+    *
+    * @param $user_id string: string value
+    *
+   **/
+   static private function liberBarre($user_id) {
+      $ch = curl_init();
+      curl_setopt($ch, CURLOPT_URL, "http://utilisateurs1.agglo-royan.fr:8080/utilisateurs/utilisateurs/GenerateurBandeauNavigationServlet?identifiant=".$user_id);
+      curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+      $output = curl_exec($ch);
+      curl_close($ch);
+      echo $output;
+   }
+
    public static function header($title) {
       global $CFG_GLPI, $HEADER_LOADED, $DB;
 
@@ -80,7 +96,7 @@ class PluginFormcreatorWizard {
       // menu toggle (desktop mode)
       echo "<input type='checkbox' id='formcreator-toggle-nav-desktop'>";
       echo "<label for='formcreator-toggle-nav-desktop' class='formcreator-nav-button'></label>";
-
+      self::liberBarre($_SESSION["glpiname"]);
       self::showTicketSummary();
 
       echo '<div id="header_top">';
