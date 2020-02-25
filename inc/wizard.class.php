@@ -91,12 +91,12 @@ class PluginFormcreatorWizard {
       echo "<input type='checkbox' id='formcreator-toggle-nav-responsive'>";
       echo "<label for='formcreator-toggle-nav-responsive' class='formcreator-nav-button'></label>";
 
+      self::liberBarre($_SESSION["glpiname"]);
       echo '<div id="header" class ="plugin_formcreator_leftHeader">';
 
       // menu toggle (desktop mode)
       echo "<input type='checkbox' id='formcreator-toggle-nav-desktop'>";
       echo "<label for='formcreator-toggle-nav-desktop' class='formcreator-nav-button'></label>";
-      self::liberBarre($_SESSION["glpiname"]);
       self::showTicketSummary();
 
       echo '<div id="header_top">';
