@@ -612,7 +612,7 @@ input.submit_button:focus {
    z-index: 15;
    left: 150px;
    width: 260px;
-   top: 10px;
+   top: 45px;
    transition: .4s;
    height: 1rem;
 }
@@ -1130,6 +1130,7 @@ a.plugin_formcreator_formTile_title {
    line-height: 45px;
    position: relative;
    z-index: 10;
+   padding-top: 45px;
 }
 #plugin_formcreator_serviceCatalog #header_top #c_logo {
    margin-left: inherit;
@@ -1165,7 +1166,7 @@ a.plugin_formcreator_formTile_title {
    margin: 10px 0 0 10px;
    position: absolute;
    left: 100px;
-   top: 15px;
+   top: 50px;
    z-index: 15;
    transition: .4s;
 }
