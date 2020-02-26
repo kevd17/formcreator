@@ -90,7 +90,7 @@ class PluginFormcreatorTextareaField extends PluginFormcreatorTextField
             'rows'            => 5,
             'display'         => false,
             'enable_richtext' => $useRichText,
-            'enable_fileupload'=> true,
+            'enable_fileupload'=> false,
          ]);
          $html .= Html::scriptBlock("$(function() {
             pluginFormcreatorInitializeTextarea('$fieldName', '$rand');
