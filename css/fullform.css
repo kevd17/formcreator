@@ -1,7 +1,7 @@
 body {
     background-color: #f5f5f5 !important;
 }
-#header, #header_top, #footer {
+#header, #header_top, #footer, #dock {
     display: none;
 }
 
